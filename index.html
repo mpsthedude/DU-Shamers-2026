@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <span class="status-pill demo"><span class="dot"></span> Demo data</span>
+      <span class="status-pill demo"><span class="dot"></span> Loading live data</span>
       <span class="status-pill">DraftKings execution</span>
       <button class="ghost-button" data-scroll="commissioner">Commissioner</button>
     </div>
@@ -30,8 +30,8 @@
         <div class="winner-row">
           <div>
             <p class="muted">Week 1 high scorer</p>
-            <h2 id="winnerName">Demo: Stone Cold Winners</h2>
-            <p class="score"><span id="winnerScore">176.42</span> pts</p>
+            <h2 id="winnerName">Awaiting live results</h2>
+            <p class="score"><span id="winnerScore">0.00</span> pts</p>
           </div>
           <div class="award-badge">$100</div>
         </div>
@@ -49,7 +49,7 @@
             <small>No cash payout this week</small>
           </button>
         </div>
-        <p class="tiny-note">Demo mode only. Live winner identification will come from the existing fantasy integration.</p>
+        <p class="tiny-note">The league-bank backend is connected; ESPN winner sync will populate this card after the scoring week is final.</p>
       </article>
 
       <article class="hero-card bank-card">
@@ -190,5 +190,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js" defer></script>
+  <script src="live.js" defer></script>
 </body>
 </html>
