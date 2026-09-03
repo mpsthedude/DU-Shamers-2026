@@ -1,0 +1,29 @@
+name: Sync DU Shamers weekly high scorer
+
+on:
+  schedule:
+    # GitHub cron is UTC. We run at both possible UTC equivalents of 9 AM ET.
+    # The Edge Function itself checks America/New_York and only performs the
+    # ESPN sync when the local hour is actually 9, covering DST automatically.
+    - cron: "5 13 * * 2"
+    - cron: "5 14 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync completed ESPN scoring week
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --header 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k' \
+            --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k' \
+            --data '{"scheduled":true}' \
+            'https://xvnkwtiydyrksucgiphi.supabase.co/functions/v1/sync-weekly-winner'
