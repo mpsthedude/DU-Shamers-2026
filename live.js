@@ -1,5 +1,14 @@
-const LIVE_API_URL = 'https://xvnkwtiydyrksucgiphi.supabase.co/functions/v1/league-dashboard';
-const LIVE_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k';
+const LIVE_API_ROOT = 'https://xvnkwtiydyrksucgiphi.supabase.co/functions/v1';
+const LIVE_API_URL = `${LIVE_API_ROOT}/league-dashboard`;
+const LIVE_MARKETS_URL = `${LIVE_API_ROOT}/draftkings-markets`;
+const LIVE_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k';
+
+function liveHeaders() {
+  return {
+    apikey: LIVE_ANON_JWT,
+    Authorization: `Bearer ${LIVE_ANON_JWT}`,
+  };
+}
 
 function centsToMoney(cents) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((Number(cents) || 0) / 100);
@@ -47,7 +56,7 @@ function applyLiveAward(award) {
     return;
   }
 
-  if (winnerName) winnerName.textContent = 'Awaiting Week 1 results';
+  if (winnerName) winnerName.textContent = `Awaiting Week ${award.week || 1} results`;
   if (winnerScore) winnerScore.textContent = '0.00';
   if (note) note.textContent = 'The live backend is connected. Tuesday winner sync will populate this card after the scoring week is complete.';
 }
@@ -88,18 +97,171 @@ async function loadLiveLeagueBank() {
   try {
     const response = await fetch(LIVE_API_URL, {
       method: 'GET',
-      headers: {
-        apikey: LIVE_ANON_JWT,
-        Authorization: `Bearer ${LIVE_ANON_JWT}`,
-      },
+      headers: liveHeaders(),
       cache: 'no-store',
     });
     if (!response.ok) throw new Error(`league-dashboard ${response.status}`);
     const data = await response.json();
     applyLiveStatus(data);
   } catch (error) {
-    console.warn('Live league bank unavailable; retaining demo shell.', error);
+    console.warn('Live league bank unavailable; retaining dashboard fallback.', error);
   }
 }
 
-window.addEventListener('DOMContentLoaded', loadLiveLeagueBank);
+function toAmericanNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value !== 'string') return null;
+  const cleaned = value.trim().replace('+', '');
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) && parsed !== 0 ? Math.trunc(parsed) : null;
+}
+
+function cleanNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function signedLine(value) {
+  const number = cleanNumber(value);
+  if (number === null) return '';
+  return number > 0 ? `+${number}` : `${number}`;
+}
+
+function eventTime(iso) {
+  if (!iso) return 'Start time unavailable';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'Start time unavailable';
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/New_York',
+    timeZoneName: 'short',
+  }).format(date);
+}
+
+function normalizeDraftKingsSelection(event, offer) {
+  const odds = toAmericanNumber(offer?.odds);
+  if (!offer?.odd_id || odds === null) return null;
+
+  const oddId = offer.odd_id;
+  let market = null;
+  let selection = null;
+
+  if (oddId === 'points-home-game-ml-home') {
+    market = 'Moneyline';
+    selection = `${event.home?.name || 'Home'} ML`;
+  } else if (oddId === 'points-away-game-ml-away') {
+    market = 'Moneyline';
+    selection = `${event.away?.name || 'Away'} ML`;
+  } else if (oddId === 'points-home-game-sp-home') {
+    market = 'Spread';
+    selection = `${event.home?.name || 'Home'} ${signedLine(offer.spread)}`.trim();
+  } else if (oddId === 'points-away-game-sp-away') {
+    market = 'Spread';
+    selection = `${event.away?.name || 'Away'} ${signedLine(offer.spread)}`.trim();
+  } else if (oddId === 'points-all-game-ou-over') {
+    market = 'Total';
+    selection = `Over ${cleanNumber(offer.over_under) ?? ''}`.trim();
+  } else if (oddId === 'points-all-game-ou-under') {
+    market = 'Total';
+    selection = `Under ${cleanNumber(offer.over_under) ?? ''}`.trim();
+  }
+
+  if (!market || !selection) return null;
+
+  const movementParts = [];
+  const openOdds = toAmericanNumber(offer.open_odds);
+  if (openOdds !== null && openOdds !== odds) movementParts.push(`opened ${openOdds > 0 ? '+' : ''}${openOdds}`);
+  const currentLine = offer.spread ?? offer.over_under;
+  const openLine = offer.open_spread ?? offer.open_over_under;
+  if (cleanNumber(openLine) !== null && cleanNumber(currentLine) !== null && Number(openLine) !== Number(currentLine)) {
+    movementParts.push(`line opened ${openLine}`);
+  }
+
+  return {
+    id: `${event.event_id}:${oddId}`,
+    market,
+    selection,
+    odds,
+    rating: 'neutral',
+    note: movementParts.length
+      ? `Live DraftKings market. ${movementParts.join('; ')}. Full intelligence analysis will evaluate this leg before submission.`
+      : 'Live DraftKings market from SportsGameOdds. Full intelligence analysis will evaluate this leg before submission.',
+    providerOddId: oddId,
+    providerEventId: event.event_id,
+    eventStartAt: event.starts_at,
+    fairOdds: offer.fair_odds ?? null,
+  };
+}
+
+function normalizeDraftKingsEvent(event) {
+  const selections = (Array.isArray(event?.odds) ? event.odds : [])
+    .map((offer) => normalizeDraftKingsSelection(event, offer))
+    .filter(Boolean);
+
+  if (!event?.event_id || !selections.length) return null;
+  return {
+    id: event.event_id,
+    sport: event.league === 'NCAAF' ? 'NCAAF' : 'NFL',
+    name: `${event.away?.name || 'Away'} @ ${event.home?.name || 'Home'}`,
+    time: eventTime(event.starts_at),
+    startsAt: event.starts_at,
+    selections,
+  };
+}
+
+async function fetchMarketLeague(league) {
+  const response = await fetch(`${LIVE_MARKETS_URL}?league=${encodeURIComponent(league)}`, {
+    method: 'GET',
+    headers: liveHeaders(),
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`draftkings-markets ${league} ${response.status}`);
+  return response.json();
+}
+
+function markMarketsLive(count) {
+  const bookNote = document.querySelector('.book-note span');
+  if (bookNote) bookNote.textContent = `${count} upcoming NFL/college events loaded from live DraftKings pricing via SportsGameOdds. Other books remain context-only.`;
+
+  const marketHeading = document.querySelector('.markets-panel .section-label');
+  if (marketHeading) marketHeading.textContent = 'LIVE DRAFTKINGS BET BUILDER';
+}
+
+async function loadLiveDraftKingsMarkets() {
+  try {
+    const results = await Promise.allSettled([
+      fetchMarketLeague('NFL'),
+      fetchMarketLeague('NCAAF'),
+    ]);
+
+    const events = results
+      .filter((result) => result.status === 'fulfilled')
+      .flatMap((result) => Array.isArray(result.value?.events) ? result.value.events : [])
+      .map(normalizeDraftKingsEvent)
+      .filter(Boolean)
+      .sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0));
+
+    if (!events.length) throw new Error('No live DraftKings markets returned');
+
+    // app.js intentionally keeps sampleEvents as a mutable fallback array. Replacing
+    // its contents preserves all existing bet-slip and selection behavior.
+    sampleEvents.splice(0, sampleEvents.length, ...events);
+    state.legs = [];
+    renderMarkets();
+    renderSlip();
+    markMarketsLive(events.length);
+  } catch (error) {
+    console.warn('Live DraftKings markets unavailable; retaining sample markets.', error);
+    const bookNote = document.querySelector('.book-note span');
+    if (bookNote) bookNote.textContent = 'Live DraftKings feed is temporarily unavailable. Sample markets are shown as a fallback.';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadLiveLeagueBank();
+  loadLiveDraftKingsMarkets();
+});
