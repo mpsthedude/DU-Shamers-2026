@@ -7,6 +7,7 @@
   <title>DU Shamers — League Bank</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="props.css" />
+  <link rel="stylesheet" href="member.css" />
 </head>
 <body>
   <header class="topbar">
@@ -99,7 +100,7 @@
         </div>
         <div class="book-note">
           <strong>DraftKings is the execution book.</strong>
-          <span>Other-book/consensus pricing will be context only once live odds are connected.</span>
+          <span>Other-book/consensus pricing is context only. The commissioner manually places every actual ticket.</span>
         </div>
         <div id="marketList" class="market-list"></div>
       </article>
@@ -124,7 +125,7 @@
           <div class="return-row"><span>Estimated total return</span><strong id="potentialReturn">—</strong></div>
           <p id="sgpWarning" class="warning hidden">Same-game legs detected. DraftKings' actual correlation-adjusted SGP price is authoritative and will be recorded by the commissioner.</p>
           <button id="analyzeButton" class="primary-button">Analyze my ticket</button>
-          <button id="submitButton" class="secondary-button">Submit to commissioner</button>
+          <button id="submitButton" class="secondary-button">Sign in to submit</button>
         </div>
       </aside>
     </section>
@@ -135,11 +136,11 @@
           <div class="section-label">SPORTSBOOK INTELLIGENCE</div>
           <h2>Ticket Analyzer</h2>
         </div>
-        <span class="status-pill demo">Analyzer UI demo</span>
+        <span class="status-pill demo">Loading analyzer</span>
       </div>
       <div class="analysis-summary" id="analysisSummary"></div>
       <div id="analysisLegs" class="analysis-legs"></div>
-      <div class="analysis-disclaimer">This demo evaluates UI behavior using sample metadata. The production analyzer will use the Sportsbook Intelligence MCP and will distinguish measured market facts from analytical judgments; it will not invent an edge or win probability.</div>
+      <div class="analysis-disclaimer">Observed market analysis will appear here. It does not place wagers or manufacture a model edge.</div>
     </section>
 
     <section class="panel">
@@ -169,7 +170,7 @@
         </div>
       </article>
 
-      <article class="panel" id="commissioner">
+      <article class="panel hidden" id="commissioner">
         <div class="panel-heading">
           <div>
             <div class="section-label">COMMISSIONER QUEUE</div>
@@ -178,7 +179,7 @@
           <span id="queueCount" class="count-badge">0</span>
         </div>
         <div id="commissionerQueue" class="queue-list"></div>
-        <p class="tiny-note">The site proposes and tracks tickets only. The commissioner remains the only person who places wagers in DraftKings.</p>
+        <p class="tiny-note">This queue records what the commissioner actually placed in DraftKings. The website never places, modifies, or cancels a wager.</p>
       </article>
     </section>
   </main>
@@ -190,9 +191,11 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="app.js" defer></script>
   <script src="live.js" defer></script>
   <script src="props.js" defer></script>
   <script src="analyzer.js" defer></script>
+  <script src="auth.js" defer></script>
 </body>
 </html>
