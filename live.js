@@ -1,12 +1,12 @@
 const LIVE_API_ROOT = 'https://xvnkwtiydyrksucgiphi.supabase.co/functions/v1';
 const LIVE_API_URL = `${LIVE_API_ROOT}/league-dashboard`;
 const LIVE_MARKETS_URL = `${LIVE_API_ROOT}/draftkings-markets`;
-const LIVE_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k';
+const LIVE_PUBLISHABLE_KEY = 'sb_publishable_oTJVPjW_EdOokBZfTSJKaA_GuUwJjOF';
 
 function liveHeaders() {
   return {
-    apikey: LIVE_ANON_JWT,
-    Authorization: `Bearer ${LIVE_ANON_JWT}`,
+    apikey: LIVE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${LIVE_PUBLISHABLE_KEY}`,
   };
 }
 
@@ -247,8 +247,6 @@ async function loadLiveDraftKingsMarkets() {
 
     if (!events.length) throw new Error('No live DraftKings markets returned');
 
-    // app.js intentionally keeps sampleEvents as a mutable fallback array. Replacing
-    // its contents preserves all existing bet-slip and selection behavior.
     sampleEvents.splice(0, sampleEvents.length, ...events);
     state.legs = [];
     renderMarkets();
