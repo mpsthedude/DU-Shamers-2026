@@ -23,7 +23,7 @@ jobs:
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header 'Content-Type: application/json' \
-            --header 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k' \
-            --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inh2bmt3dGl5ZHlya3N1Y2dpcGhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzODA2NjgsImV4cCI6MjEwMzk1NjY2OH0.IZ3-e62sZjfhvxYLNjGg9B1EHeeDh7qzqgjjFIyWk3k' \
+            --header 'apikey: sb_publishable_oTJVPjW_EdOokBZfTSJKaA_GuUwJjOF' \
+            --header 'Authorization: Bearer sb_publishable_oTJVPjW_EdOokBZfTSJKaA_GuUwJjOF' \
             --data '{"scheduled":true}' \
             'https://xvnkwtiydyrksucgiphi.supabase.co/functions/v1/sync-weekly-winner'
