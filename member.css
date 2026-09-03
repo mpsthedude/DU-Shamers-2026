@@ -1,0 +1,35 @@
+.member-access-button { white-space: nowrap; }
+.member-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(2,8,5,.78); backdrop-filter: blur(12px); }
+.member-modal { width: min(620px,100%); max-height: min(780px,calc(100vh - 2rem)); overflow: auto; border: 1px solid var(--line); border-radius: 20px; padding: 1.2rem; color: var(--text); background: linear-gradient(180deg,#111f17,#08120c); box-shadow: 0 30px 90px rgba(0,0,0,.55); }
+.member-modal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+.member-modal-head h2 { margin:.2rem 0 0; }
+.member-close { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line); background:transparent; color:var(--text); cursor:pointer; font-size:1.25rem; }
+.member-card { padding:1rem; border:1px solid var(--line); border-radius:14px; background:#09130d; margin-top:.75rem; }
+.member-card strong, .member-card span, .member-card small { display:block; }
+.member-card span, .member-card small { color:var(--muted); margin-top:.3rem; }
+.member-form { display:grid; gap:.65rem; }
+.member-form input, .member-form select, .commissioner-input { width:100%; min-height:42px; padding:.65rem .75rem; border:1px solid var(--line); border-radius:10px; background:#08120c; color:var(--text); font:inherit; }
+.member-form button, .claim-button, .commissioner-action { border:0; border-radius:10px; padding:.7rem .85rem; cursor:pointer; font-weight:800; }
+.member-form button, .claim-button.primary, .commissioner-action.primary { color:#041108; background:linear-gradient(135deg,var(--accent-2),var(--accent)); }
+.claim-team-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; margin-top:.75rem; }
+.claim-button { text-align:left; color:var(--text); background:#0e1a13; border:1px solid var(--line); }
+.claim-button:hover:not(:disabled) { border-color:var(--accent); }
+.claim-button:disabled { opacity:.42; cursor:not-allowed; }
+.claim-button small { color:var(--muted); font-weight:500; }
+.member-status-row { display:flex; align-items:center; justify-content:space-between; gap:.7rem; flex-wrap:wrap; }
+.member-status-chip { padding:.35rem .55rem; border-radius:999px; font-size:.7rem; font-weight:850; border:1px solid var(--line); color:var(--accent-2); }
+.member-link-button { border:1px solid var(--line); border-radius:9px; background:transparent; color:var(--text); padding:.5rem .7rem; cursor:pointer; }
+.member-link-button:hover { border-color:var(--accent); color:var(--accent-2); }
+.commissioner-section-title { color:var(--muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.09em; font-weight:800; margin:1rem 0 .45rem; }
+.commissioner-persistent-item { padding:.9rem; border:1px solid var(--line); border-radius:12px; background:#09130d; margin-bottom:.65rem; }
+.commissioner-persistent-item h3 { margin:0; font-size:.9rem; }
+.commissioner-persistent-item p { margin:.3rem 0; color:var(--muted); font-size:.74rem; line-height:1.45; }
+.commissioner-actions { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.65rem; }
+.commissioner-action { color:var(--text); background:#14231a; border:1px solid #34503c; padding:.52rem .7rem; font-size:.73rem; }
+.commissioner-action.danger { color:#ffb3b3; border-color:rgba(255,116,116,.35); background:rgba(255,116,116,.06); }
+.placement-form { display:grid; grid-template-columns:1fr 1.4fr auto; gap:.45rem; margin-top:.65rem; }
+.commissioner-leg-list { margin:.5rem 0 0; padding-left:1.1rem; color:#cbd7cf; font-size:.72rem; }
+.commissioner-leg-list li { margin:.22rem 0; }
+.auth-help { color:#72877a; font-size:.7rem; line-height:1.5; margin-top:.7rem; }
+#submitButton:disabled { cursor:not-allowed; opacity:.58; }
+@media (max-width:700px){ .claim-team-grid{grid-template-columns:1fr}.placement-form{grid-template-columns:1fr}.member-modal{border-radius:15px} }
