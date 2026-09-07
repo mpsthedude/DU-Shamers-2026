@@ -333,6 +333,7 @@ function providerBudgetMarkup() {
     ['monthly_budget_microusd','Monthly budget ($)'],['max_request_cost_microusd','Worst-case cost per request ($)']];
   return `<article class="commissioner-persistent-item">
     <h3>Provider spending · ${p.enabled?'Enabled':'Paused'}</h3>
+    ${p.prepaid_subscription?'<p>SportsGameOdds is covered by the existing subscription. Additional spend is capped at $0; object and request limits still apply.</p>':''}
     <p>Today: ${Number(b.day_requests)} / ${Number(p.daily_request_limit)} requests · ${usd(b.day_reserved_microusd)} reserved of ${usd(p.daily_budget_microusd)}.
     Month: ${Number(b.month_requests)} / ${Number(p.monthly_request_limit)} requests · ${usd(b.month_reserved_microusd)} reserved of ${usd(p.monthly_budget_microusd)}.</p>
     <p>Reserved amounts are conservative estimates, not confirmed charges. Failed calls stay counted. Limits reset at midnight UTC. Hosted intelligence remains disabled.</p>

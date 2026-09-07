@@ -218,7 +218,11 @@ Deno.serve(async (req: Request) => {
     if(!policy || typeof policy.enabled!=="boolean" || fields.some(k=>!Number.isSafeInteger(policy[k]) || policy[k]<0 || policy[k]>1000000000000)
       || policy.daily_request_limit>100000 || policy.monthly_request_limit>1000000 || policy.per_user_daily_limit>10000)
       return json({error:"invalid_provider_budget"},400);
-    if(policy.enabled && (fields.some(k=>policy[k]===0) || policy.daily_request_limit>policy.monthly_request_limit
+    const {data:existingPolicy,error:existingError}=await db.from('provider_budget').select('prepaid_subscription').eq('provider','sportsgameodds').single();
+    if(existingError)return json({error:'provider_budget_read_failed'},503);
+    const prepaid=existingPolicy?.prepaid_subscription===true;
+    if(prepaid && policy.max_request_cost_microusd!==0)return json({error:'prepaid_requests_require_zero_incremental_cost'},400);
+    if(policy.enabled && (['daily_request_limit','monthly_request_limit','per_user_daily_limit'].some(k=>policy[k]===0) || (!prepaid && policy.max_request_cost_microusd===0) || policy.daily_request_limit>policy.monthly_request_limit
       || policy.daily_budget_microusd>policy.monthly_budget_microusd || policy.max_request_cost_microusd>policy.daily_budget_microusd))
       return json({error:"invalid_provider_budget"},400);
     const values=Object.fromEntries(fields.map(k=>[k,policy[k]]));
