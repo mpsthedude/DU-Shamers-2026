@@ -142,6 +142,7 @@ async function refreshMemberState({ refreshCommissioner = true } = {}) {
   }
 
   updateSubmissionAccess();
+  if(typeof renderAnalysisAllowance==='function')renderAnalysisAllowance(memberSessionData?.analysis_usage,Boolean(authSession),Boolean(memberSessionData?.eligible_weekly_winner));
   if (refreshCommissioner && memberSessionData?.membership?.role === 'COMMISSIONER') await loadCommissionerConsole();
   else document.querySelector('#commissioner')?.classList.add('hidden');
   renderMemberModal();
@@ -234,6 +235,11 @@ function replaceSubmitHandler() {
 }
 
 function updateSubmissionAccess() {
+  const canChoose = Boolean(authSession && memberSessionData?.membership?.fantasy_team_id &&
+    memberSessionData?.eligible_weekly_winner && memberSessionData?.submission_window_open &&
+    (!memberSessionData?.current_proposal || memberSessionData.current_proposal.status === 'REJECTED'));
+  document.querySelector('.weekly-winner')?.classList.toggle('hidden', !canChoose);
+  document.querySelector('.hero-grid')?.classList.toggle('bank-only', !canChoose);
   replaceSubmitHandler();
   const button = document.querySelector('#submitButton');
   if (!button) return;
@@ -339,6 +345,19 @@ function providerBudgetMarkup() {
   </article>`;
 }
 
+function integrationBudgetMarkup(){
+  const budget=commissionerData?.integration_budget, policy=commissionerData?.analysis_policy;
+  if(!budget || !policy)return '';
+  return `<article class="commissioner-persistent-item"><h3>Overall integration budget</h3>
+    <p>This ceiling and the provider-specific limits both apply. Amounts reserve worst-case costs, not billed totals.</p>
+    <label>Daily ceiling ($) <input id="integrationDaily" class="commissioner-input" type="number" min="0" step="0.01" value="${Number(budget.daily_microusd)/1000000}"></label>
+    <label>Monthly ceiling ($) <input id="integrationMonthly" class="commissioner-input" type="number" min="0" step="0.01" value="${Number(budget.monthly_microusd)/1000000}"></label>
+    <label><input id="integrationEnabled" type="checkbox" ${budget.enabled?'checked':''}> Allow new paid reservations</label>
+    <button class="commissioner-action" data-save-integrations>Save overall budget</button>
+    <p>Weekly analysis: ${policy.enabled?'Enabled':'Paused'} · five fresh attempts per winner · no cooldown. Fresh data is shared for three minutes. Cached views do not consume an attempt; failed attempts can count.</p>
+    <button class="commissioner-action" data-toggle-analysis>${policy.enabled?'Pause':'Enable'} weekly analysis</button></article>`;
+}
+
 function ownerInvitationMarkup(){
   const owners=commissionerData?.owners||[],enabled=commissionerData?.invitations_enabled;
   if(!owners.length)return '';
@@ -361,7 +380,7 @@ function renderCommissionerConsole() {
   const openBets = (commissionerData.bets || []).filter((bet) => bet.status === 'OPEN');
   if (count) count.textContent = pendingClaims.length + pendingProposals.length;
 
-  let html = ownerInvitationMarkup();
+  let html = integrationBudgetMarkup() + ownerInvitationMarkup();
   if (pendingClaims.length) {
     html += '<div class="commissioner-section-title">Pending team claims</div>' + pendingClaims.map((claim) => `
       <article class="commissioner-persistent-item">
@@ -375,6 +394,7 @@ function renderCommissionerConsole() {
         <h3>${escapeMemberText(proposal.submitter?.fantasy_team_name || proposal.submitter?.display_name || 'Weekly winner')} · ${commissionerMoney(proposal.proposed_stake_cents)}</h3>
         <p>${proposal.legs?.length || 0}-leg ticket · submitted ${proposal.submitted_at ? new Date(proposal.submitted_at).toLocaleString() : '—'} · estimated ${proposal.estimated_american_odds ? formatOdds(proposal.estimated_american_odds) : 'price unavailable'}</p>
         <ul class="commissioner-leg-list">${(proposal.legs || []).map((leg) => `<li>${escapeMemberText(leg.selection)} · ${formatOdds(leg.american_odds)}</li>`).join('')}</ul>
+        ${new Set((proposal.legs || []).map(leg=>leg.event_id)).size < (proposal.legs || []).length ? '<p class="warning">Same-game ticket: the estimate does not account for related outcomes. Verify the exact combination in DraftKings and enter its actual combined odds below. Reject the ticket if DraftKings does not accept the combination.</p>' : ''}
         <div class="placement-form">
           <input class="commissioner-input" id="actualOdds-${proposal.id}" placeholder="Actual DK odds, e.g. +625" />
           <input class="commissioner-input" id="ticketRef-${proposal.id}" placeholder="DK ticket/reference (optional)" />
@@ -413,6 +433,18 @@ function bindCommissionerActions() {
   bind('[data-invite-owner]', async button=>{
     const result=await commissionerRequest('POST',{action:'invite_owner',owner_id:button.dataset.inviteOwner});
     showToast(result.skipped?'This invitation was already sent.':'Invitation submitted for email delivery.');
+  });
+  bind('[data-save-integrations]',async()=>{
+    const daily=document.getElementById('integrationDaily').value,monthly=document.getElementById('integrationMonthly').value;
+    if(!daily.trim() || !monthly.trim())throw new Error('Enter both budget amounts');
+    const policy={enabled:document.getElementById('integrationEnabled').checked,daily_microusd:Math.round(Number(daily)*1000000),monthly_microusd:Math.round(Number(monthly)*1000000)};
+    if(!window.confirm('Save the overall integration budget'+(policy.enabled?' and allow budgeted provider calls?':' with new paid calls paused?')))return false;
+    await commissionerRequest('POST',{action:'set_integration_budget',policy});showToast('Overall budget saved.');
+  });
+  bind('[data-toggle-analysis]',async()=>{
+    const enabled=!commissionerData.analysis_policy.enabled;
+    if(enabled && !window.confirm('Enable five fresh analysis attempts for the weekly winner? Overall and provider budgets still apply.'))return false;
+    await commissionerRequest('POST',{action:'set_analysis_enabled',enabled});showToast(enabled?'Weekly analysis enabled.':'Weekly analysis paused.');
   });
   bind('[data-create-edition]', async()=>{
     await commissionerRequest('POST',{action:'create_edition',week:Number(document.querySelector('#editionWeek').value)});
@@ -464,7 +496,7 @@ function bindCommissionerActions() {
     const odds = document.querySelector('#actualOdds-' + CSS.escape(id))?.value?.trim();
     const ticketRef = document.querySelector('#ticketRef-' + CSS.escape(id))?.value?.trim();
     if (!odds) { showToast('Enter the actual combined DraftKings odds first.'); return false; }
-    if (!window.confirm('Confirm you manually placed this ticket in DraftKings at ' + odds + '?')) return false;
+    if (!window.confirm('Confirm DraftKings accepted every selection exactly as submitted and you placed the ticket at actual combined odds ' + odds + '? These actual odds determine the official total return, including the stake.')) return false;
     await commissionerRequest('POST', { action: 'confirm_placement', proposal_id: id, placed_american_odds: odds, sportsbook_ticket_ref: ticketRef || null });
     showToast('DraftKings placement recorded.');
   });

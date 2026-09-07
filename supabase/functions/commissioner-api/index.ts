@@ -82,6 +82,11 @@ Deno.serve(async (req: Request) => {
     for (const leg of proposalLegs || []) { if (!legsByProposal.has(leg.proposal_id)) legsByProposal.set(leg.proposal_id, []); legsByProposal.get(leg.proposal_id)!.push(leg); }
     const {data:providerBudget,error:budgetError}=await db.rpc("provider_budget_status");
     if(budgetError) return json({error:"provider_budget_read_failed"},500);
+    const [integrationSettings,analysisSettings]=await Promise.all([
+      db.from('integration_budget').select('*').eq('singleton',true).single(),
+      db.from('analysis_policy').select('*').eq('singleton',true).single(),
+    ]);
+    if(integrationSettings.error || analysisSettings.error)return json({error:'integration_settings_unavailable'},500);
     const [editionsResult,sourceResult]=await Promise.all([
       db.from("weekly_editions").select("id,week,revision,version,facts,entries,status,published_at").eq("season_id",season.id).in("status",["DRAFT","PUBLISHED"]).order("week",{ascending:false}),
       db.from("league_standings_snapshots").select("id,payload").eq("season_id",season.id).order("observed_at",{ascending:false}).limit(1).maybeSingle(),
@@ -93,6 +98,8 @@ Deno.serve(async (req: Request) => {
       editions:editionsResult.data||[],
       edition_weeks:(sourceResult.data?.payload?.completed_weeks||[]).map((w:any)=>w.week).filter((w:number)=>w>=1&&w<=18),
       provider_budget:providerBudget,
+      integration_budget:integrationSettings.data,
+      analysis_policy:analysisSettings.data,
       commissioner,
       claims: (claimsResult.data || []).map((c: any) => ({ ...c, display_name: profileNames.get(c.profile_id) || "League member" })),
       proposals: (proposalsResult.data || []).map((p: any) => ({ ...p, submitter: submitterMap.get(p.submitted_by) || null, legs: legsByProposal.get(p.id) || [] })),
@@ -162,6 +169,19 @@ Deno.serve(async (req: Request) => {
     } catch { return json({error:"espn_standings_unavailable"},503); }
   }
 
+  if(action==='set_integration_budget'){
+    const p=body.policy;
+    if(!p || typeof p.enabled!=='boolean' || !Number.isSafeInteger(p.daily_microusd) || !Number.isSafeInteger(p.monthly_microusd)
+      || p.daily_microusd<0 || p.monthly_microusd<0 || p.monthly_microusd>1000000000000 || p.daily_microusd>p.monthly_microusd
+      || (p.enabled && p.daily_microusd===0))return json({error:'invalid_integration_budget'},400);
+    const {error}=await db.from('integration_budget').update({enabled:p.enabled,daily_microusd:p.daily_microusd,monthly_microusd:p.monthly_microusd}).eq('singleton',true);
+    return error?json({error:'integration_budget_update_failed'},500):json({ok:true});
+  }
+  if(action==='set_analysis_enabled'){
+    if(typeof body.enabled!=='boolean')return json({error:'invalid_analysis_policy'},400);
+    const {error}=await db.from('analysis_policy').update({enabled:body.enabled,runs_per_award:5,cooldown_seconds:0}).eq('singleton',true);
+    return error?json({error:'analysis_policy_update_failed'},500):json({ok:true});
+  }
   if (action === "set_provider_budget") {
     const policy=body?.policy;
     const fields=["daily_request_limit","monthly_request_limit","daily_budget_microusd","monthly_budget_microusd",

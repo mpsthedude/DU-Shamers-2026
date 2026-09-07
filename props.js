@@ -1,5 +1,6 @@
 const LIVE_PROPS_URL = `${LIVE_API_ROOT}/draftkings-event-props`;
 const propsCache = new Map();
+function escapeProp(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 let activePropsEventId = null;
 let activePropsData = null;
 
@@ -51,7 +52,7 @@ function normalizePropLeg(event, prop) {
     selection: propSelectionLabel(prop),
     odds,
     rating: 'neutral',
-    note: 'Live full-game DraftKings player prop via SportsGameOdds. The intelligence analyzer will evaluate market context, news, injuries, and movement before submission.',
+    note: 'DraftKings player-prop snapshot. Availability and price are checked at submission. Analysis requires configured provider access.',
     providerOddId: prop.odd_id,
     providerEventId: event.id,
     eventStartAt: event.startsAt,
@@ -85,7 +86,7 @@ function ensurePropsExplorer() {
       <button class="props-close" id="propsClose" aria-label="Close player props">×</button>
     </div>
     <div class="props-controls">
-      <input id="propSearch" type="search" placeholder="Search player name…" autocomplete="off" />
+      <input id="propSearch" type="search" aria-label="Search player name" placeholder="Search player name…" autocomplete="off" />
       <select id="propCategory" aria-label="Filter prop category">
         <option value="ALL">All props</option>
         <option value="Passing">Passing</option>
@@ -155,7 +156,7 @@ function renderPropResults() {
   results.innerHTML = groups.map((group) => `
     <article class="prop-player-card">
       <div class="prop-player-head">
-        <div><strong>${group.player || 'Player'}</strong><span>${group.position || 'NFL'}${group.teamId ? ` · ${String(group.teamId).replace(/_NFL$/, '').replaceAll('_', ' ')}` : ''}</span></div>
+        <div><strong>${escapeProp(group.player || 'Player')}</strong><span>${escapeProp(group.position || 'NFL')}${group.teamId ? ` · ${escapeProp(String(group.teamId).replace(/_NFL$/, '').replaceAll('_', ' '))}` : ''}</span></div>
         <span class="prop-count">${group.props.length}</span>
       </div>
       <div class="prop-options">
@@ -166,8 +167,8 @@ function renderPropResults() {
           const lineText = prop.line !== null && prop.line !== undefined && prop.line !== '' ? ` ${prop.line}` : '';
           const sideText = prop.side ? cap(prop.side) : '';
           return `<button class="prop-option ${selected ? 'selected' : ''}" data-prop-id="${encodeURIComponent(prop.odd_id)}">
-            <span>${prettyStat(prop.stat_id)}</span>
-            <strong>${sideText}${lineText}</strong>
+            <span>${escapeProp(prettyStat(prop.stat_id))}</span>
+            <strong>${escapeProp(sideText)}${escapeProp(lineText)}</strong>
             <small>DK ${formatOdds(leg.odds)}</small>
           </button>`;
         }).join('')}
@@ -192,6 +193,7 @@ function togglePropLeg(event, prop) {
   if (existing >= 0) {
     state.legs.splice(existing, 1);
   } else {
+    if (event.startsAt && Date.parse(event.startsAt) <= Date.now()) return showToast('This game has already started.');
     state.legs.push({ ...leg, eventId: event.id, eventName: event.name, sport: event.sport, time: event.time });
   }
   renderSlip();
@@ -230,6 +232,7 @@ async function openPlayerProps(eventId) {
     });
     if (!response.ok) throw new Error(`draftkings-event-props ${response.status}`);
     const data = await response.json();
+    if (data.event_id !== event.id || data.league !== 'NFL' || !data.starts_at || Date.parse(data.starts_at) <= Date.now() || !Number.isFinite(Date.parse(data.starts_at))) throw new Error('invalid_prop_event');
     propsCache.set(event.id, data);
     if (activePropsEventId === event.id) { activePropsData = data; renderPropResults(); }
     enhanceEventPropButtons();

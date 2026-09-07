@@ -126,10 +126,12 @@ async function loadLiveLeagueBank() {
     if (!response.ok) throw new Error(`league-dashboard ${response.status}`);
     const data = await response.json();
     applyLiveStatus(data);
+    if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(data.weekly_tracker);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(data.standings);
     if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(data.editions);
   } catch (error) {
     console.warn('Live league bank unavailable.', error);
+    if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(null);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(null);
     if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(null);
     const badge = document.querySelector('#bankDataStatus');
@@ -253,6 +255,7 @@ function normalizeDraftKingsEvent(event) {
     id: event.event_id,
     sport: event.league === 'NCAAF' ? 'NCAAF' : 'NFL',
     name: `${event.away?.name || 'Away'} @ ${event.home?.name || 'Home'}`,
+    searchNames: `${event.away?.short || ''} ${event.home?.short || ''}`,
     time: eventTime(event.starts_at),
     startsAt: event.starts_at,
     selections,
@@ -290,6 +293,10 @@ async function loadLiveDraftKingsMarkets() {
       .map(normalizeDraftKingsEvent)
       .filter(Boolean)
       .sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0));
+
+    ['NFL','NCAAF'].forEach((league,index) => {
+      state.marketCoverage[league] = results[index].status === 'fulfilled' ? results[index].value.coverage : {complete:false};
+    });
 
     if (!events.length) throw new Error('No live DraftKings markets returned');
 

@@ -219,6 +219,17 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     const occupiedIds = new Set((occupied || []).map((r: any) => String(r.fantasy_team_id)));
     const pendingIds = new Set((pending || []).map((r: any) => String(r.fantasy_team_id)));
     const eligible = Boolean(award?.source_status === "WINNER_IDENTIFIED" && membership?.fantasy_team_id && String(award.fantasy_team_id) === String(membership.fantasy_team_id));
+    let analysisUsage=null;
+    if(eligible && award){
+      const [policyResult,usageResult]=await Promise.all([
+        db.from('analysis_policy').select('runs_per_award,enabled').eq('singleton',true).single(),
+        db.from('weekly_analysis_runs').select('id',{count:'exact',head:true}).eq('award_id',award.id),
+      ]);
+      if(!policyResult.error && !usageResult.error && Number.isInteger(usageResult.count)){
+        const limit=policyResult.data.runs_per_award;
+        analysisUsage={limit,used:usageResult.count,remaining:Math.max(0,limit-usageResult.count),enabled:policyResult.data.enabled};
+      }
+    }
     let proposal = null;
     if (season && award && membership) {
       const { data: decision } = await db.from("weekly_decisions").select("id,choice,cash_payout_cents,wager_budget_cents,decided_at").eq("weekly_award_id", award.id).eq("member_id", membership.id).maybeSingle();
@@ -234,6 +245,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
       claim,
       current_award: award,
       eligible_weekly_winner: eligible,
+      analysis_usage:analysisUsage,
       submission_window_open: awardWindowOpen(award),
       team_directory: teams.map((team) => ({ ...team, claimed: occupiedIds.has(team.team_id), pending_claim: pendingIds.has(team.team_id) })),
       current_proposal: proposal,

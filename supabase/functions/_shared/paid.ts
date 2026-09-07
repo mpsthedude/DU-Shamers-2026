@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 
 // All SGO event requests use this gate; no automatic retries or alternate providers.
-export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<Response>) {
+export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<Response>, policy: {weeklyAnalysis?:boolean} = {}) {
   return async (req: Request) => {
     const evidence: any[] = [];
     let db: any;
     let identity: Promise<any> | null = null;
+    let analysisReservation: Promise<any> | null = null;
     function database() {
       if (!db) {
         const url=Deno.env.get("SUPABASE_URL"), key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -48,8 +49,21 @@ export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<R
       const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sgo-events-v1:"+url.toString()));
       const key=Array.from(new Uint8Array(bytes)).map(v=>v.toString(16).padStart(2,"0")).join("");
       const client=database();
+      if(policy.weeklyAnalysis){
+        // Cache hits don't consume weekly runs. Never let a caller opt into this policy.
+        const {data:cached,error:cacheError}=await client.from('provider_cache').select('payload,observed_at')
+          .eq('provider','sportsgameodds').eq('cache_key',key).gt('expires_at',new Date().toISOString()).maybeSingle();
+        if(cacheError)throw new Error('provider_accounting_unavailable');
+        if(cached){evidence.push({observed_at:cached.observed_at,cached:true});return Response.json(cached.payload);}
+        if(!analysisReservation)analysisReservation=(async()=>{
+          const id=await actor(true);if(!id)throw new Error('analysis_winner_only');
+          const {data,error}=await client.rpc('reserve_weekly_analysis',{p_actor:id});
+          if(error)throw new Error(error.message);if(!data?.run_id)throw new Error('analysis_disabled');return data;
+        })();
+        await analysisReservation;
+      }
       const {data:reservation,error}=await client.rpc("reserve_provider_request",{p_key:key,
-        p_actor:await actor(options.allowMember===true),p_allow_member:options.allowMember===true});
+        p_actor:await actor(options.allowMember===true || policy.weeklyAnalysis===true),p_allow_member:options.allowMember===true || policy.weeklyAnalysis===true});
       if(error) throw new Error(error.message);
       if(reservation?.cached){
         evidence.push({observed_at:reservation.observed_at,cached:true});
@@ -85,13 +99,13 @@ export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<R
       if(response.ok && evidence.length && response.headers.get("content-type")?.includes("application/json")){
         const body=await response.json();
         body.provider_cache={oldest_observed_at:evidence.map(e=>e.observed_at).sort()[0],
-          snapshots:evidence.length,served_from_cache:evidence.every(e=>e.cached),ttl_seconds:60};
+          snapshots:evidence.length,served_from_cache:evidence.every(e=>e.cached),ttl_seconds:180};
         return Response.json(body,{status:response.status,headers:response.headers});
       }
       return response;
     } catch(error) {
       const code=error instanceof Error ? error.message : "";
-      const known=new Set(["paid_requests_disabled","fresh_provider_request_not_authorized","provider_refresh_in_progress",
+      const known=new Set(["integrations_disabled","integration_budget_exhausted","analysis_disabled","analysis_winner_only","analysis_winner_unavailable","analysis_window_closed","analysis_weekly_limit","analysis_cooldown","paid_requests_disabled","fresh_provider_request_not_authorized","provider_refresh_in_progress",
         "provider_concurrency_limit","provider_budget_exhausted","provider_user_quota_exhausted"]);
       return Response.json({error:known.has(code)?code:"provider_request_unavailable"},{status:503,
         headers:{"Access-Control-Allow-Origin":"*","Content-Type":"application/json","Cache-Control":"no-store"}});

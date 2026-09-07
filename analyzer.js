@@ -1,6 +1,18 @@
 const LIVE_ANALYZE_URL = `${LIVE_API_ROOT}/analyze-ticket`;
 let lastTicketAnalysis = null;
 
+function renderAnalysisAllowance(usage, signedIn=false, eligible=false){
+  const node=document.getElementById('analysisAllowance');if(!node)return;
+  if(!signedIn){node.textContent='Weekly winner allowance: 5 fresh analyses. Sign in to view usage.';return;}
+  if(!eligible){node.textContent='Fresh analyses are available to the weekly winner only. Fresh cached results do not consume an attempt.';return;}
+  if(!usage || !Number.isInteger(usage.used) || !Number.isInteger(usage.remaining) || !Number.isInteger(usage.limit)){
+    node.textContent='Weekly allowance: 5 fresh analyses. Usage is temporarily unavailable.';return;
+  }
+  node.textContent=`${usage.used} of ${usage.limit} fresh analyses used · ${usage.remaining} remaining this week. `+
+    (usage.remaining===0?'Fresh-analysis limit reached. Fresh cached results are still available without using an attempt. ':'Fresh cached results do not use an attempt. ')+
+    (usage.enabled===false?'New paid analyses are currently paused. ':'')+'Failed attempts may count.';
+}
+
 function pct(value, digits = 1) {
   if (value == null || value === '') return '—';
   const number = Number(value);
@@ -62,7 +74,7 @@ function renderLiveAnalysis(data) {
   panel.classList.remove('hidden');
   if (badge) {
     badge.classList.remove('demo');
-    badge.textContent = 'Live market analysis';
+    badge.textContent = data.recorded_test ? 'Recorded live-data test' : 'Live market analysis';
     badge.style.color = 'var(--accent-2)';
   }
 
@@ -98,8 +110,9 @@ function renderLiveAnalysis(data) {
       : '';
     const intelligenceNote = intelligenceStatus === 'connected'
       ? ' Sportsbook Intelligence enrichment is connected for this run.'
-      : ' Live market facts are active. The separate Sportsbook Intelligence MCP is still local-only; this analyzer already contains the hosted hook, so news/injury/weather/source-corroboration enrichment will drop into the same response once that service is exposed.';
+      : ' AI, news, injury and weather enrichment are not included in this analysis.';
     disclaimer.textContent = `This analysis reports observed market facts and does not manufacture an edge or model win probability.${correlationNote}${intelligenceNote}`;
+    if(data.recorded_test)disclaimer.textContent += ` Recorded on ${new Date(data.generated_at).toLocaleString()}; prices may have changed. Replaying this test makes no paid calls.`;
   }
 
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -148,12 +161,15 @@ async function analyzeLiveTicket() {
       body: JSON.stringify(analyzerPayload()),
       cache: 'no-store',
     });
-    if (!response.ok) throw new Error(`analyze-ticket ${response.status}`);
-    renderLiveAnalysis(await response.json());
+    const result=await response.json();
+    if (!response.ok) throw new Error(result.error || `analyze-ticket ${response.status}`);
+    renderLiveAnalysis(result);
   } catch (error) {
     console.warn('Live ticket analysis failed', error);
-    showToast('Live analysis is temporarily unavailable.');
+    const messages={analysis_weekly_limit:'Your five fresh analyses for this week have been used.',analysis_cooldown:'Wait two minutes between fresh analyses.',analysis_winner_only:'Only the weekly winner can request fresh analysis.',analysis_disabled:'Fresh analysis is paused by the commissioner.',analysis_window_closed:'The weekly analysis window is closed.',provider_budget_exhausted:'The shared provider budget has been reached.'};
+    showToast(messages[error.message] || 'Live analysis is temporarily unavailable.');
   } finally {
+    if(typeof refreshMemberState==='function')await refreshMemberState({refreshCommissioner:false});
     if (button) {
       button.disabled = false;
       button.textContent = original;

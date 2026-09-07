@@ -39,12 +39,16 @@
   </nav>
 
   <main>
+    <section class="panel hidden" id="weeklyTracker">
+      <div class="panel-heading"><div><div class="section-label">FOLLOW THE WEEKLY WAGER</div><h2>Weekly Ticket Tracker</h2></div></div>
+      <div id="weeklyTrackerBody" aria-live="polite"></div>
+    </section>
     <div class="league-heading" id="overview">
       <div><p>DU SHAMERS · 2026 SEASON</p><h2>League clubhouse</h2></div>
       <span>12 teams <span aria-hidden="true">·</span> ESPN Fantasy Football</span>
     </div>
-    <section class="hero-grid" aria-label="Weekly award and league bank">
-      <article class="hero-card weekly-winner">
+    <section class="hero-grid bank-only" aria-label="Weekly award and league bank">
+      <article class="hero-card weekly-winner hidden">
         <div class="section-label">WEEKLY CONTROL</div>
         <div class="winner-row">
           <div>
@@ -133,8 +137,7 @@
             <h2>Build this week's ticket</h2>
           </div>
           <div class="tabs" role="tablist">
-            <button class="tab active" data-sport="ALL">All</button>
-            <button class="tab" data-sport="NFL">NFL</button>
+            <button class="tab active" data-sport="NFL">NFL</button>
             <button class="tab" data-sport="NCAAF">College</button>
           </div>
         </div>
@@ -142,7 +145,16 @@
           <strong>DraftKings is the execution book.</strong>
           <span>Other-book/consensus pricing is context only. The commissioner manually places every actual ticket.</span>
         </div>
-        <div id="marketList" class="market-list"></div>
+        <div class="game-browser-controls">
+          <label for="gameSearch">Search games</label>
+          <input id="gameSearch" type="search" placeholder="Team, matchup or market…" autocomplete="off" />
+          <label for="gameWindow">Game dates</label>
+          <select id="gameWindow"><option value="week">Next 7 days</option><option value="all">All loaded upcoming games</option></select>
+        </div>
+        <p id="gameCount" class="tiny-note" role="status" aria-live="polite"></p>
+        <p id="gameCoverage" class="tiny-note"></p>
+        <div id="marketList" class="market-list" role="region" aria-label="Available football games" tabindex="0"></div>
+        <button id="showMoreGames" class="ghost-button" hidden>Show more games</button>
       </article>
 
       <aside class="panel bet-slip">
@@ -163,7 +175,8 @@
           <div><span>Implied probability</span><strong id="impliedProbability">—</strong></div>
           <div><span>Stake</span><strong id="stakeAmount">—</strong></div>
           <div class="return-row"><span>Estimated total return</span><strong id="potentialReturn">—</strong></div>
-          <p id="sgpWarning" class="warning hidden">Same-game legs detected. DraftKings' actual correlation-adjusted SGP price is authoritative and will be recorded by the commissioner.</p>
+          <p id="sgpWarning" class="warning hidden">Unadjusted estimate—DraftKings payout may differ. Individual odds are multiplied without accounting for related outcomes. DraftKings may reject this combination. The commissioner must verify every selection and record the actual combined odds when placing it. Total return includes the stake.</p>
+          <p id="analysisAllowance" class="tiny-note" role="status" aria-live="polite">Weekly winner allowance: 5 fresh analyses. Sign in to view usage.</p>
           <button id="analyzeButton" class="primary-button">Analyze my ticket</button>
           <button id="submitButton" class="secondary-button">Sign in to submit</button>
         </div>
@@ -235,6 +248,7 @@
   <script src="app.js" defer></script>
   <script src="standings.js" defer></script>
   <script src="editions.js" defer></script>
+  <script src="weekly-tracker.js" defer></script>
   <script src="live.js" defer></script>
   <script src="props.js" defer></script>
   <script src="analyzer.js" defer></script>

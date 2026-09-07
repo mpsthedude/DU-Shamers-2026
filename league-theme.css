@@ -139,3 +139,14 @@ footer { color: var(--muted); border-color: #cbccce; }
   .award-badge { min-width: 65px; width: 65px; font-size: 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+.game-browser-controls { display:grid; grid-template-columns:1fr; gap:.4rem; margin:1rem 0 .5rem; }
+.game-browser-controls label { font-weight:700; font-size:.8rem; }
+.game-browser-controls input, .game-browser-controls select { width:100%; min-width:0; padding:.7rem; border:1px solid #c8ccd1; border-radius:6px; background:#fff; color:#151617; font:inherit; }
+.markets-panel .market-list { max-height:650px; max-height:min(650px,70vh); overflow-y:auto; overscroll-behavior-y:contain; scrollbar-gutter:stable; padding-right:.4rem; }
+.markets-panel .market-list:focus-visible { outline:2px solid #1769ca; outline-offset:4px; }
+.weekly-tracked-ticket { padding:1rem 0; border-top:1px solid #d8dce1; }
+.tracked-legs { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:.8rem; }
+.tracked-leg { background:#f5f7fa; border:1px solid #d8dce1; border-radius:8px; padding:1rem; overflow-wrap:anywhere; }
+.tracked-leg p { margin:.5rem 0; }
+.tracked-leg progress { width:100%; accent-color:#1769ca; }
+.hero-grid.bank-only { grid-template-columns:1fr; }

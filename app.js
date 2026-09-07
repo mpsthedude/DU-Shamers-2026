@@ -71,7 +71,9 @@ const saved = JSON.parse(localStorage.getItem('duShamersDemoState') || '{}');
 const state = {
   choice: saved.choice || null,
   legs: [],
-  sport: 'ALL',
+  sport: 'NFL',
+  marketDisplayLimit: 20,
+  marketCoverage: {},
   submissions: Array.isArray(saved.submissions) ? saved.submissions : [],
 };
 
@@ -137,7 +139,28 @@ function renderChoice() {
 }
 
 function renderMarkets() {
-  const visible = sampleEvents.filter((event) => state.sport === 'ALL' || event.sport === state.sport);
+  const search = ($('#gameSearch')?.value || '').trim().toLowerCase();
+  const weekOnly = ($('#gameWindow')?.value || 'week') === 'week';
+  const now = Date.now();
+  const upcoming = sampleEvents.filter(event => event.sport === state.sport && (!event.startsAt || new Date(event.startsAt).getTime() > now));
+  const matching = upcoming.filter(event =>
+    (!weekOnly || !event.startsAt || new Date(event.startsAt).getTime() < now + 7 * 86400000) &&
+    `${event.name} ${event.sport} ${event.searchNames || ''} ${event.selections.map(s => `${s.market} ${s.selection}`).join(' ')}`.toLowerCase().includes(search))
+    .sort((a,b) => Date.parse(a.startsAt || 0)-Date.parse(b.startsAt || 0));
+  const visible = matching.slice(0, state.marketDisplayLimit);
+  const count = $('#gameCount');
+  const coverage = state.marketCoverage[state.sport];
+  if (count) count.textContent = `Showing ${visible.length} of ${matching.length} matching games · ${upcoming.length} loaded · ${weekOnly ? 'next 7 days' : 'all loaded dates'}`;
+  const coverageNote = $('#gameCoverage');
+  if (coverageNote) coverageNote.textContent = coverage?.complete === true
+    ? 'All feed pages loaded for this date window. Search checks every loaded game.'
+    : 'Schedule may be incomplete. Search checks loaded games only; a commissioner refresh is needed for missing pages.';
+  const more = $('#showMoreGames');
+  if (more) { more.hidden = matching.length <= visible.length; more.textContent = `Show more games (${matching.length-visible.length} remaining)`; }
+  if (!visible.length) {
+    $('#marketList').innerHTML = '<p class="empty-state">'+(upcoming.length ? 'No games match. Try another team, league or date filter.' : 'No upcoming DraftKings games are loaded yet.')+'</p>';
+    return;
+  }
   $('#marketList').innerHTML = visible.map((event) => `
     <article class="event-card">
       <div class="event-head">
@@ -212,6 +235,9 @@ function renderSlip() {
   const eventIds = state.legs.map((leg) => leg.eventId);
   const hasSameGame = new Set(eventIds).size !== eventIds.length;
   $('#sgpWarning').classList.toggle('hidden', !hasSameGame);
+  $('#potentialReturn').previousElementSibling.textContent = hasSameGame ? 'Unadjusted estimated return' : 'Estimated return';
+  $('#parlayOdds').previousElementSibling.textContent = hasSameGame ? 'Unadjusted estimated odds' : 'Estimated odds';
+  $('#impliedProbability').textContent = hasSameGame ? 'Not available for same-game combinations' : `${probability.toFixed(1)}%`;
 }
 
 function analyzeTicket() {
@@ -323,6 +349,10 @@ function renderQueue() {
 }
 
 function wireEvents() {
+  for (const [id, eventName] of [['gameSearch', 'input'], ['gameWindow', 'change']]) {
+    $('#'+id)?.addEventListener(eventName, () => { state.marketDisplayLimit = 20; renderMarkets(); $('#marketList').scrollTop = 0; });
+  }
+  $('#showMoreGames')?.addEventListener('click', () => { state.marketDisplayLimit += 20; renderMarkets(); });
   $$('.choice-button').forEach((button) => button.addEventListener('click', () => {
     state.choice = button.dataset.choice;
     persist();
@@ -332,6 +362,7 @@ function wireEvents() {
 
   $$('.tab').forEach((tab) => tab.addEventListener('click', () => {
     state.sport = tab.dataset.sport;
+    state.marketDisplayLimit = 20;
     $$('.tab').forEach((item) => item.classList.toggle('active', item === tab));
     renderMarkets();
   }));

@@ -187,4 +187,4 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     legs: analyzed,
     sportsbook_intelligence: { status: intelligenceStatus, data: intelligence },
   });
-}));
+}, {weeklyAnalysis:true}));

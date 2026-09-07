@@ -29,6 +29,7 @@ test('weekly requests reject oversized tickets, duplicate selections and malform
   const {ctx}=harness();
   assert.throws(()=>ctx.requestedLegs(Array(13).fill(leg)),/legs_limit/);
   assert.throws(()=>ctx.requestedLegs([leg,leg]),/duplicate_selection/);
+  assert.equal(ctx.requestedLegs([leg,{...leg,odd_id:'passing_yards-player-game-ou-over'}]).length,2);
   assert.throws(()=>ctx.requestedLegs([{...leg,odds:'1e3'}]),/invalid_leg/);
   assert.equal(ctx.requestedLegs([{...leg,odds:'-110'}])[0].odds,-110);
 });
@@ -47,6 +48,21 @@ test('verified selection uses provider names and rejects changed DraftKings odds
   const started=event();started.status.started=true;
   assert.throws(()=>ctx.verifiedLeg(started,leg,now),/event_already_started/);
 });
+test('player props use verified names and reject changed lines, odds, missing players and started games',()=>{
+  const {ctx}=harness(),now=new Date('2026-09-15T14:00:00Z');
+  const prop={event_id:'event',odd_id:'passing_yards-player-game-ou-over',sport:'NFL',odds:-110,line:249.5};
+  const e=event();e.players={player:{names:{display:'Verified Quarterback'}}};
+  e.odds={[prop.odd_id]:{oddID:prop.odd_id,periodID:'game',statEntityID:'player',betTypeID:'ou',sideID:'over',marketName:'Passing Yards',byBookmaker:{draftkings:{available:true,odds:-110,overUnder:249.5}}}};
+  const result=ctx.verifiedLeg(e,{...prop,player_name:'Forged'},now);
+  assert.match(result.selection,/Verified Quarterback.*Passing Yards.*over 249.5/);
+  for(const mutate of [x=>x.odds[prop.odd_id].byBookmaker.draftkings.overUnder=250.5,x=>x.odds[prop.odd_id].byBookmaker.draftkings.odds=-115]){
+    const changed=structuredClone(e);mutate(changed);assert.throws(()=>ctx.verifiedLeg(changed,prop,now),/selection_changed/);
+  }
+  const missing=structuredClone(e);missing.players={};assert.throws(()=>ctx.verifiedLeg(missing,prop,now),/selection_unavailable/);
+  const unavailable=structuredClone(e);unavailable.odds[prop.odd_id].byBookmaker.draftkings.available=false;assert.throws(()=>ctx.verifiedLeg(unavailable,prop,now),/selection_unavailable/);
+  e.status.started=true;assert.throws(()=>ctx.verifiedLeg(e,prop,now),/event_already_started/);
+});
+
 test('award window binds to the identification week and handles the fall DST cutoff',()=>{
   const {ctx}=harness();
   const award={week:8,source_status:'WINNER_IDENTIFIED',identified_at:'2026-10-27T13:00:00Z',source_observed_at:'2026-10-27T13:00:00Z'};
