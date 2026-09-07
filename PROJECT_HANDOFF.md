@@ -1,5 +1,11 @@
 # DU Shamers 2026: verified project handoff
 
+### SMTP and Auth dashboard configuration
+
+- September 7 follow-up: user registered dushamers.com in Porkbun and supplied a send-only RESEND_API_KEY in ignored .env. Resend domain created; user corrected the three DNS records. DNS verified event is present; final domain verification remains Pending.
+- Signed-in Supabase dashboard used to save custom Resend SMTP (sender league@dushamers.com, port 465), production Site URL and exact account setup redirect, disable public signups, set 12-character minimum and require current password for normal updates. Email confirmation remains enabled. Both repository invitation/reset templates and branded subjects saved and previewed. See docs/AUTH_SETUP.md for current state; these supersede the pending configuration notes below.
+- No real email invitations sent; commissioner bootstrap, delivery and authenticated password tests remain. Leave AUTH_INVITATIONS_ENABLED off until those pass. No new API keys generated, paid plans purchased or browser credentials exposed.
+
 ### Invited owner accounts
 
 - User resumed authentication and approved one-time invitation links instead of emailed passwords. No sender domain/provider exists yet. Recommended dushamers.com (availability unverified), Porkbun registration, and Resend's free transactional plan. See docs/AUTH_SETUP.md for remaining configuration.
