@@ -11,8 +11,8 @@ test('account and commissioner renderers escape stored names and ticket referenc
       classList: { add() {}, remove() {} }, querySelector() { return null; }, querySelectorAll() { return []; } });
     return elements.get(selector);
   };
-  const ctx = vm.createContext({ Intl, Date, console, LIVE_API_ROOT: 'https://example.invalid', LIVE_PUBLISHABLE_KEY: 'fixture',
-    window: { supabase: { createClient() { return {}; } } },
+  const ctx = vm.createContext({ Intl, Date, console, URLSearchParams, LIVE_API_ROOT: 'https://example.invalid', LIVE_PUBLISHABLE_KEY: 'fixture',
+    window: { location: { hash: '' }, supabase: { createClient() { return {}; } } },
     document: { querySelector: get, querySelectorAll() { return []; } },
     formatOdds: String,
   });

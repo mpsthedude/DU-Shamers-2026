@@ -5,6 +5,10 @@ function escapeMemberText(value) {
 const AUTH_SUPABASE_URL = 'https://xvnkwtiydyrksucgiphi.supabase.co';
 const MEMBER_API_URL = `${LIVE_API_ROOT}/member-api`;
 const COMMISSIONER_API_URL = `${LIVE_API_ROOT}/commissioner-api`;
+let incomingAuthType = new URLSearchParams(window.location.hash.slice(1)).get('type');
+const incomingAuthError = new URLSearchParams(window.location.hash.slice(1)).has('error');
+let passwordMode = null;
+let accountActionBusy = false;
 const authClient = window.supabase.createClient(AUTH_SUPABASE_URL, LIVE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
@@ -119,15 +123,6 @@ async function commissionerRequest(method = 'GET', body = null) {
   return data;
 }
 
-async function sendMagicLink(email) {
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { error } = await authClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
-  });
-  if (error) throw error;
-}
-
 async function refreshMemberState({ refreshCommissioner = true } = {}) {
   const { data } = await authClient.auth.getSession();
   authSession = data?.session || null;
@@ -153,34 +148,7 @@ async function refreshMemberState({ refreshCommissioner = true } = {}) {
 }
 
 function renderSignedOut(body) {
-  body.innerHTML = `
-    <div class="member-card">
-      <strong>Sign in with your email</strong>
-      <span>We’ll send a one-time Supabase magic link. No league password is required.</span>
-      <form class="member-form" id="memberSignInForm" style="margin-top:.8rem">
-        <input id="memberEmail" type="email" required autocomplete="email" placeholder="you@example.com" />
-        <button type="submit">Send sign-in link</button>
-      </form>
-      <div class="auth-help">After your first sign-in, choose your ESPN fantasy team. New owner claims require commissioner approval before that account can submit a weekly wager.</div>
-    </div>`;
-  body.querySelector('#memberSignInForm')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const email = body.querySelector('#memberEmail')?.value?.trim();
-    if (!email) return;
-    const button = event.currentTarget.querySelector('button');
-    button.disabled = true;
-    button.textContent = 'Sending…';
-    try {
-      await sendMagicLink(email);
-      button.textContent = 'Check your email';
-      showToast('Sign-in link sent. Check your email.');
-    } catch (error) {
-      console.warn('Magic link failed', error);
-      button.disabled = false;
-      button.textContent = 'Send sign-in link';
-      showToast(error?.message || 'Unable to send sign-in link.');
-    }
-  });
+  renderAccountSignIn(body);
 }
 
 function renderTeamClaims(body) {
@@ -209,7 +177,9 @@ function renderTeamClaims(body) {
 function renderMemberModal() {
   const body = document.querySelector('#memberModalBody');
   if (!body) return;
+  if (accountActionBusy) return;
   if (!authSession) return renderSignedOut(body);
+  if (passwordMode) return renderAccountPassword(body,passwordMode);
 
   const membership = memberSessionData?.membership;
   const award = memberSessionData?.current_award;
@@ -222,13 +192,14 @@ function renderMemberModal() {
         <button class="member-link-button" id="memberSignOut">Sign out</button>
       </div>
     </div>
-    ${renderTeamClaims(body)}
+    ${membership ? '' : '<div class="member-card"><strong>Team access unavailable</strong><span>Use the email address on your league invitation. Contact the commissioner if your account needs a different email mapping.</span></div>'}
     ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${escapeMemberText(membership.fantasy_team_name)}</strong><span>ESPN team ${escapeMemberText(membership.fantasy_team_id)} · ${escapeMemberText(membership.role)}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${escapeMemberText(award.fantasy_team_name || 'pending')}${eligible ? ' · YOU ARE THE WEEKLY WINNER' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${escapeMemberText(proposal.status || proposal.decision?.choice || 'decision recorded')}</small>` : ''}</div>` : ''}
     ${membership?.role === 'COMMISSIONER' ? `<div class="member-card"><strong>Commissioner controls enabled</strong><span>Team claims, submitted tickets, placement confirmation, and settlement are available in the Commissioner Queue below.</span><button class="member-link-button" id="jumpCommissioner" style="margin-top:.7rem">Open commissioner queue</button></div>` : ''}
-    <div class="member-card"><button class="member-link-button" id="refreshMemberAccount">Refresh league status</button></div>`;
+    <div class="member-card"><strong>Account settings</strong><p>Your sign-in email is managed by the commissioner so team ownership stays accurate.</p><button class="member-link-button" id="changeAccountPassword">Change password</button> <button class="member-link-button" id="refreshMemberAccount">Refresh league status</button></div>`;
 
   body.querySelector('#memberSignOut')?.addEventListener('click', async () => { await authClient.auth.signOut(); closeMemberModal(); });
   body.querySelector('#refreshMemberAccount')?.addEventListener('click', () => refreshMemberState());
+  body.querySelector('#changeAccountPassword')?.addEventListener('click',()=>{passwordMode='change';renderMemberModal();});
   body.querySelector('#jumpCommissioner')?.addEventListener('click', () => { closeMemberModal(); document.querySelector('#commissioner')?.scrollIntoView({ behavior: 'smooth' }); });
   const pendingClaimId = memberSessionData?.claim?.id;
   body.querySelector('#cancelTeamClaim')?.addEventListener('click', async (event) => {
@@ -368,6 +339,18 @@ function providerBudgetMarkup() {
   </article>`;
 }
 
+function ownerInvitationMarkup(){
+  const owners=commissionerData?.owners||[],enabled=commissionerData?.invitations_enabled;
+  if(!owners.length)return '';
+  return '<div class="commissioner-section-title">League invitations</div><p>'+
+    (enabled?'Send each owner a one-time link to choose their password.':'Email delivery setup is pending. Invitations are disabled until the sender is configured.')+
+    '</p>'+owners.map(owner=>`<article class="commissioner-persistent-item">
+      <h3>${escapeMemberText(owner.manager_name)} · ESPN team ${escapeMemberText(owner.fantasy_team_id)}</h3>
+      <p>${escapeMemberText(owner.email)} · ${escapeMemberText(owner.invite_status)}</p>
+      <button class="commissioner-action" data-invite-owner="${escapeMemberText(owner.id)}" ${!enabled||!['NOT_SENT','FAILED'].includes(owner.invite_status)?'disabled':''}>Send invitation</button>
+    </article>`).join('');
+}
+
 function renderCommissionerConsole() {
   const panel = document.querySelector('#commissioner');
   const queue = document.querySelector('#commissionerQueue');
@@ -378,7 +361,7 @@ function renderCommissionerConsole() {
   const openBets = (commissionerData.bets || []).filter((bet) => bet.status === 'OPEN');
   if (count) count.textContent = pendingClaims.length + pendingProposals.length;
 
-  let html = '';
+  let html = ownerInvitationMarkup();
   if (pendingClaims.length) {
     html += '<div class="commissioner-section-title">Pending team claims</div>' + pendingClaims.map((claim) => `
       <article class="commissioner-persistent-item">
@@ -427,6 +410,10 @@ function bindCommissionerActions() {
       }
     }));
   }
+  bind('[data-invite-owner]', async button=>{
+    const result=await commissionerRequest('POST',{action:'invite_owner',owner_id:button.dataset.inviteOwner});
+    showToast(result.skipped?'This invitation was already sent.':'Invitation submitted for email delivery.');
+  });
   bind('[data-create-edition]', async()=>{
     await commissionerRequest('POST',{action:'create_edition',week:Number(document.querySelector('#editionWeek').value)});
     showToast('Private recap draft ready for review.');
@@ -496,5 +483,13 @@ function bindCommissionerActions() {
 
 createMemberUi();
 replaceSubmitHandler();
-authClient.auth.onAuthStateChange(() => { window.setTimeout(() => refreshMemberState(), 0); });
+authClient.auth.onAuthStateChange((event,session) => {
+  if(event==='PASSWORD_RECOVERY')passwordMode='recovery';
+  if(event==='SIGNED_IN' && incomingAuthType==='invite'){passwordMode='setup';incomingAuthType=null;}
+  if(event==='SIGNED_OUT'){passwordMode=null;incomingAuthType=null;}
+  window.setTimeout(async()=>{
+    await refreshMemberState();
+    if(passwordMode && authSession)openMemberModal();
+  },0);
+});
 refreshMemberState();

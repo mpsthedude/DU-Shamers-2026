@@ -5,15 +5,15 @@
   "functions": [
     {
       "slug": "member-api",
-      "version": 4,
+      "version": 5,
       "verify_jwt": true,
-      "ezbr_sha256": "0d954fe65acb7b5c465c17e3698cc2248c820c15534754f521a6af97e43bbd38"
+      "ezbr_sha256": "84b90e13557603de6da1f7be8a15f2977857e165f11fbdcf4a968f60fb750b9c"
     },
     {
       "slug": "commissioner-api",
-      "version": 7,
+      "version": 8,
       "verify_jwt": true,
-      "ezbr_sha256": "797b62fd0e71b28654146b8de6b42efff9d3493ea1e8352df7a28635d7e4969f"
+      "ezbr_sha256": "4f612663c89e7a63a58bfddd3335e443092620a3fe2b6cb11d2b8f15f6365692"
     },
     {
       "slug": "league-dashboard",

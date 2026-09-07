@@ -1,4 +1,5 @@
 import { paidHandler } from "../_shared/paid.ts";
+import { verifiedOwner } from "../_shared/owners.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -115,6 +116,8 @@ async function authenticatedContext(req: Request) {
   await db.from("profiles").upsert({ id: user.id, display_name: user.user_metadata?.display_name || user.email.split("@")[0] }, { onConflict: "id", ignoreDuplicates: true });
   const { data: league } = await db.from("leagues").select("id,name").eq("name", LEAGUE_NAME).single();
   if (!league) return { error: json({ error: "league_not_found" }, 500) } as any;
+  const owner=await verifiedOwner(db,user,league.id);
+  if(owner.error) return {error:json({error:owner.error},403)} as any;
   const email = user.email.toLowerCase();
   const { data: allowed } = await db.from("commissioner_allowlist").select("id").eq("league_id", league.id).eq("email", email).maybeSingle();
   if (allowed) {
@@ -245,6 +248,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
   const action = body?.action;
 
   if (action === "claim_team") {
+    if(membership?.fantasy_team_id) return json({error:"owner_mapping_managed_by_commissioner"},409);
     const teamId = String(body?.fantasy_team_id || "").trim();
     if (!/^[0-9]{1,20}$/.test(teamId)) return json({ error: "invalid_team" }, 400);
     let teams;

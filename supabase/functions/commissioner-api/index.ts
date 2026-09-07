@@ -1,5 +1,6 @@
 import { fetchStandings } from "../_shared/standings.ts";
 import { draftEdition } from "../_shared/editions.ts";
+import { verifiedOwner } from "../_shared/owners.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -28,6 +29,8 @@ async function context(req: Request) {
   const { data: league } = await db.from("leagues").select("id,name").eq("name", LEAGUE_NAME).single(); if (!league) return { error: json({ error: "league_not_found" }, 500) } as any;
   const { data: allowed } = await db.from("commissioner_allowlist").select("id").eq("league_id", league.id).eq("email", user.email.toLowerCase()).maybeSingle();
   if (!allowed) return { error: json({ error: "commissioner_not_authorized" }, 403) } as any;
+  const owner=await verifiedOwner(db,user,league.id);
+  if(owner.error) return {error:json({error:owner.error},403)} as any;
   const { data: member } = await db.from("league_members").select("id,role,fantasy_team_id,fantasy_team_name").eq("league_id", league.id).eq("profile_id", user.id).maybeSingle();
   if (!member) await db.from("league_members").insert({ league_id: league.id, profile_id: user.id, role: "COMMISSIONER" });
   else if (member.role !== "COMMISSIONER") await db.from("league_members").update({ role: "COMMISSIONER" }).eq("id", member.id);
@@ -61,12 +64,13 @@ Deno.serve(async (req: Request) => {
   const { db, user, league, commissioner, season } = ctx;
 
   if (req.method === "GET") {
-    const [claimsResult, proposalsResult, betsResult] = await Promise.all([
+    const [claimsResult, proposalsResult, betsResult, ownersResult] = await Promise.all([
       db.from("team_claims").select("id,profile_id,fantasy_team_id,fantasy_team_name,status,requested_at,reviewed_at,review_note").eq("league_id", league.id).order("requested_at", { ascending: false }),
       db.from("bet_proposals").select("id,weekly_decision_id,submitted_by,category,sport,execution_book,proposed_stake_cents,estimated_american_odds,estimated_return_cents,status,first_event_start_at,hard_deadline_at,submitted_at,created_at").eq("season_id", season.id).order("created_at", { ascending: false }),
       db.from("bets").select("id,proposal_id,category,sportsbook,stake_cents,placed_american_odds,potential_return_cents,status,sportsbook_ticket_ref,placed_at,settled_at,settlement_return_cents").eq("season_id", season.id).order("placed_at", { ascending: false }),
+      db.from("league_owner_directory").select("id,fantasy_team_id,team_name_at_import,manager_name,email,invite_status,invite_sent_at").eq("league_id",league.id).eq("active",true).order("manager_name"),
     ]);
-    if (claimsResult.error || proposalsResult.error || betsResult.error) return json({ error: "commissioner_read_failed" }, 500);
+    if (claimsResult.error || proposalsResult.error || betsResult.error || ownersResult.error) return json({ error: "commissioner_read_failed" }, 500);
     const proposalIds = (proposalsResult.data || []).map((p: any) => p.id);
     const { data: proposalLegs } = proposalIds.length ? await db.from("bet_proposal_legs").select("id,proposal_id,sport,event_id,odd_id,event_name,market_name,selection,american_odds,event_start_at,observed_at,sort_order").in("proposal_id", proposalIds).order("sort_order") : { data: [] as any[] };
     const memberIds = (proposalsResult.data || []).map((p: any) => p.submitted_by).filter(Boolean);
@@ -84,6 +88,8 @@ Deno.serve(async (req: Request) => {
     ]);
     if(editionsResult.error || sourceResult.error) return json({error:"edition_read_failed"},500);
     return json({
+      owners:ownersResult.data||[],
+      invitations_enabled:Deno.env.get("AUTH_INVITATIONS_ENABLED")==="true",
       editions:editionsResult.data||[],
       edition_weeks:(sourceResult.data?.payload?.completed_weeks||[]).map((w:any)=>w.week).filter((w:number)=>w>=1&&w<=18),
       provider_budget:providerBudget,
@@ -96,6 +102,27 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+
+  if(action==="invite_owner"){
+    if(Deno.env.get("AUTH_INVITATIONS_ENABLED")!=="true") return json({error:"email_delivery_not_configured"},503);
+    if(typeof body.owner_id!=="string" || !/^[0-9a-f-]{36}$/i.test(body.owner_id)) return json({error:"invalid_owner_id"},400);
+    const {data:reservation,error:reserveError}=await db.rpc("reserve_owner_invitation",{p_actor:user.id,p_league:league.id,p_owner:body.owner_id});
+    if(reserveError) return json({error:"invitation_unavailable_or_needs_review"},409);
+    if(reservation.skipped) return json({ok:true,skipped:reservation.skipped});
+    let sent=false,code="invitation_delivery_unknown";
+    try {
+      const {error}=await db.auth.admin.inviteUserByEmail(reservation.email,{redirectTo:"https://mpsthedude.github.io/DU-Shamers-2026/?account=setup"});
+      sent=!error;code=error?.code||"invitation_delivery_failed";
+      const status=sent?"SENT":error?.status>=500?"UNKNOWN":"FAILED";
+      const {error:saveError}=await db.from("league_owner_directory").update({invite_status:status,invite_sent_at:sent?new Date().toISOString():null,
+        invite_error:sent?null:code}).eq("id",body.owner_id).eq("league_id",league.id);
+      if(saveError)return json({error:"invitation_delivery_needs_review"},503);
+      return sent?json({ok:true}):json({error:"invitation_delivery_failed",code},503);
+    } catch {
+      await db.from("league_owner_directory").update({invite_status:"UNKNOWN",invite_error:code}).eq("id",body.owner_id).eq("league_id",league.id);
+      return json({error:"invitation_delivery_needs_review"},503);
+    }
+  }
 
   if (["create_edition","save_edition","publish_edition"].includes(action)) {
     const args:any={p_actor:user.id,p_season:season.id,p_action:action==="create_edition"?"CREATE":action==="save_edition"?"SAVE":"PUBLISH"};

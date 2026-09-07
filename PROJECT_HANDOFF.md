@@ -1,5 +1,14 @@
 # DU Shamers 2026: verified project handoff
 
+### Invited owner accounts
+
+- User resumed authentication and approved one-time invitation links instead of emailed passwords. No sender domain/provider exists yet. Recommended dushamers.com (availability unverified), Porkbun registration, and Resend's free transactional plan. See docs/AUTH_SETUP.md for remaining configuration.
+- Migration invited_owner_accounts applied; member-api v5 and commissioner-api v8 deployed. Imported the 12 user-supplied owner mappings privately into league_owner_directory, using actual ESPN IDs (last screenshot row is ID 13). No emails/contact list shipped in site assets or migration. Team renames preserve assignments; ownership/email changes need reconciliation.
+- Server verifies confirmed Auth email against the private directory on every member/commissioner request. Service-only atomic RPCs link stable team IDs and reserve invitation attempts. Existing claim assignment lock is shared. Unlisted accounts and assignment conflicts are denied. Commissioner role derives from the private allowlist.
+- Frontend supports password login, invitation password setup, password recovery, and account password change using current_password, pinned Supabase JS 2.115.0. Password saves sign out refresh sessions globally; existing access tokens expire normally. Commissioner-only owner invitation list uses a fixed redirect and a default-off AUTH_INVITATIONS_ENABLED secret, with duplicate protection and ambiguous-send review.
+- 44 Node tests pass, plus rollback SQL tests with actual service_role for mapping, role assignment, conflicts, rename stability, invitations/cooldown and public access denial. Profile trigger still works after removing public EXECUTE. Security advisor: zero WARN/ERROR, 24 intentional INFO notices for service-only tables with RLS and no browser policies. See https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy.
+- Local desktop/mobile sign-in and recovery navigation checked with headless Edge: no JS errors or mobile overflow. Real invitation delivery, expired-link handling and authenticated end-to-end password changes still require SMTP setup, redirect/password policy settings and first commissioner invite in Supabase Auth. Templates are prepared but not installed. No invitations sent, purchases made, or paid provider calls used.
+
 ### ESPN-inspired visual refresh
 
 - User paused authentication work and requested ESPN Fantasy colors/theme. Inspected public https://fantasy.espn.com/football/welcome and /football/leaders, their computed styles and ESPN's public espn-ui.css. Reference uses #edeef0 canvas, white cards, #151617 text, #dcdddf lines, a charcoal masthead and blue controls. DU Shamers uses its own red DU mark and system fonts; no ESPN logos/fonts or marketing artwork were copied.
