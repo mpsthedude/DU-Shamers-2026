@@ -94,7 +94,7 @@ async function authenticatedContext(req: Request) {
     else if (current.role !== "COMMISSIONER") await db.from("league_members").update({ role: "COMMISSIONER" }).eq("id", current.id);
   }
   const { data: membership } = await db.from("league_members").select("id,role,fantasy_team_id,fantasy_team_name").eq("league_id", league.id).eq("profile_id", user.id).maybeSingle();
-  return { db, user, league, membership };
+  return { db, user, league, membership, isCommissioner: Boolean(allowed) };
 }
 async function currentSeasonAndAward(db: any, leagueId: string) {
   const { data: season } = await db.from("seasons").select("id,year,weekly_award_cents").eq("league_id", leagueId).eq("year", YEAR).single();
@@ -130,6 +130,19 @@ async function validateLiveLegs(legs: any[]) {
     }
   }
   return checked;
+}
+
+
+async function claimResult(db: any, args: Record<string, unknown>) {
+  const { data, error } = await db.rpc("manage_team_claim", args);
+  if (!error) return json(data);
+  const known = new Set(["member_sign_in_required", "invalid_claim_action", "claim_note_too_long",
+    "league_not_found", "commissioner_not_authorized", "invalid_team", "active_claim_already_exists",
+    "team_already_assigned", "team_already_claimed", "team_claim_pending_or_approved",
+    "claim_not_found", "claim_already_resolved"]);
+  if (known.has(error.message)) return json({ error: error.message }, 409);
+  console.error("claim_transaction_failed", error.code);
+  return json({ error: "claim_transaction_failed" }, 500);
 }
 
 Deno.serve(async (req: Request) => {
@@ -175,32 +188,22 @@ Deno.serve(async (req: Request) => {
 
   if (action === "claim_team") {
     const teamId = String(body?.fantasy_team_id || "").trim();
-    if (!teamId) return json({ error: "fantasy_team_id_required" }, 400);
-    if (membership?.fantasy_team_id) return json({ error: "team_already_assigned" }, 409);
-    const teams = await espnTeams();
+    if (!/^[0-9]{1,20}$/.test(teamId)) return json({ error: "invalid_team" }, 400);
+    let teams;
+    try { teams = await espnTeams(); }
+    catch { return json({ error: "team_directory_unavailable" }, 503); }
     const team = teams.find((t) => t.team_id === teamId);
     if (!team) return json({ error: "unknown_espn_team" }, 400);
-    const { data: occupied } = await db.from("league_members").select("id").eq("league_id", league.id).eq("fantasy_team_id", teamId).maybeSingle();
-    if (occupied) return json({ error: "team_already_claimed" }, 409);
-    const { data: activeClaim } = await db.from("team_claims").select("id,profile_id,status").eq("league_id", league.id).eq("fantasy_team_id", teamId).in("status", ["PENDING","APPROVED"]).maybeSingle();
-    if (activeClaim && activeClaim.profile_id !== user.id) return json({ error: "team_claim_pending_or_approved" }, 409);
-
-    if (membership?.role === "COMMISSIONER") {
-      const { error: updateError } = await db.from("league_members").update({ fantasy_team_id: team.team_id, fantasy_team_name: team.team_name }).eq("id", membership.id);
-      if (updateError) return json({ error: "commissioner_team_assign_failed" }, 500);
-      await db.from("team_claims").insert({ league_id: league.id, profile_id: user.id, fantasy_team_id: team.team_id, fantasy_team_name: team.team_name, status: "APPROVED", reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: "Commissioner self-assignment" });
-      return json({ ok: true, status: "APPROVED", team });
-    }
-
-    const { data: claim, error: claimError } = await db.from("team_claims").insert({ league_id: league.id, profile_id: user.id, fantasy_team_id: team.team_id, fantasy_team_name: team.team_name, status: "PENDING" }).select("id,status,fantasy_team_id,fantasy_team_name,requested_at").single();
-    if (claimError) return json({ error: "team_claim_failed" }, 409);
-    return json({ ok: true, claim });
+    return claimResult(db, { p_actor: user.id, p_league: league.id,
+      p_action: ctx.isCommissioner ? "SELF_ASSIGN" : "REQUEST",
+      p_team_id: team.team_id, p_team_name: team.team_name });
   }
 
   if (action === "cancel_claim") {
-    const { error } = await db.from("team_claims").update({ status: "CANCELLED" }).eq("league_id", league.id).eq("profile_id", user.id).eq("status", "PENDING");
-    if (error) return json({ error: "cancel_claim_failed" }, 500);
-    return json({ ok: true });
+    const claimId = String(body?.claim_id || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claimId))
+      return json({ error: "claim_id_required" }, 400);
+    return claimResult(db, { p_actor: user.id, p_league: league.id, p_action: "CANCEL", p_claim: claimId });
   }
 
   if (action === "submit_weekly_bet") {

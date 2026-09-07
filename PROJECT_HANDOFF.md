@@ -4,6 +4,15 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 
 ## Repair update: 2026-09-07
 
+### Team claims increment
+
+- Migration 20260907130332_atomic_team_claims adds service-only SECURITY INVOKER manage_team_claim. A transaction-level advisory lock per league serializes claim transitions; existing unique indexes remain the final constraint. ESPN directory validation happens before the transaction.
+- Request retries reuse the same active claim. Approval and commissioner self-assignment save membership and claim status atomically. Approval/rejection/cancellation replays return the existing result; conflicting terminal states fail. Cancellation requires the specific claim ID so an old retry cannot cancel a newer request.
+- member-api v2 and commissioner-api v4 are deployed. Self-assignment requires the current email allowlist result, rather than a previously stored commissioner role alone. SQL additionally checks commissioner membership; browser roles cannot execute the RPC or write claim tables.
+- Nine Node regression tests pass, including actual TypeScript handler evaluation with stubbed identity/provider calls. tests/team-claims.sql passed before and after deployment using SET LOCAL ROLE service_role inside rolled-back transactions. Tests cover authorization, cross-league isolation, competing requests, terminal conflicts, retries and forced write failures. Simultaneous multi-session load and real magic-link sign-in remain untested.
+- After checks: 0 claims, 0 memberships, 0 bets, 4 original ledger rows, 0 test Auth users. No paid provider requests or real team assignments were made during development.
+- Weekly decision/proposal insertion and winner sync still require their own atomic workflow/grant repair. Do not describe weekly submissions as ready. Next: bind submissions to the actual award window, validate refreshed DraftKings lines, and atomically save decision/cash/proposal/legs before granting those writes. Spending controls, leaderboard and saved roasts follow.
+
 ### Commissioner accounting increment
 
 - Migration 20260907124703_harden_commissioner_accounting adds SECURITY INVOKER RPCs record_ticket_placement and record_ticket_settlement, executable only by service_role. The Edge Function validates the Auth user and current commissioner email allowlist before passing actor ID; RPCs also check commissioner membership in the target season's league.

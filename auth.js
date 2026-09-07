@@ -220,9 +220,14 @@ function renderMemberModal() {
   body.querySelector('#memberSignOut')?.addEventListener('click', async () => { await authClient.auth.signOut(); closeMemberModal(); });
   body.querySelector('#refreshMemberAccount')?.addEventListener('click', () => refreshMemberState());
   body.querySelector('#jumpCommissioner')?.addEventListener('click', () => { closeMemberModal(); document.querySelector('#commissioner')?.scrollIntoView({ behavior: 'smooth' }); });
-  body.querySelector('#cancelTeamClaim')?.addEventListener('click', async () => {
-    try { await memberRequest('POST', { action: 'cancel_claim' }); await refreshMemberState(); }
+  const pendingClaimId = memberSessionData?.claim?.id;
+  body.querySelector('#cancelTeamClaim')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    if (button.disabled) return;
+    button.disabled = true;
+    try { await memberRequest('POST', { action: 'cancel_claim', claim_id: pendingClaimId }); await refreshMemberState(); }
     catch (error) { showToast(memberErrorText(error.message)); }
+    finally { button.disabled = false; }
   });
   body.querySelectorAll('[data-team-id]').forEach((button) => button.addEventListener('click', async () => {
     if (!window.confirm(`Request ownership of ${button.querySelector('strong')?.textContent}?`)) return;

@@ -40,6 +40,19 @@ async function namesByProfile(db: any, ids: string[]) {
   return new Map((data || []).map((row: any) => [row.id, row.display_name]));
 }
 
+
+async function claimResult(db: any, args: Record<string, unknown>) {
+  const { data, error } = await db.rpc("manage_team_claim", args);
+  if (!error) return json(data);
+  const known = new Set(["member_sign_in_required", "invalid_claim_action", "claim_note_too_long",
+    "league_not_found", "commissioner_not_authorized", "invalid_team", "active_claim_already_exists",
+    "team_already_assigned", "team_already_claimed", "team_claim_pending_or_approved",
+    "claim_not_found", "claim_already_resolved"]);
+  if (known.has(error.message)) return json({ error: error.message }, 409);
+  console.error("claim_transaction_failed", error.code);
+  return json({ error: "claim_transaction_failed" }, 500);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const ctx: any = await context(req); if (ctx.error) return ctx.error;
@@ -72,26 +85,14 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
 
-  if (action === "approve_claim") {
-    const claimId = String(body?.claim_id || ""); if (!claimId) return json({ error: "claim_id_required" }, 400);
-    const { data: claim } = await db.from("team_claims").select("id,profile_id,fantasy_team_id,fantasy_team_name,status").eq("id", claimId).eq("league_id", league.id).single();
-    if (!claim || claim.status !== "PENDING") return json({ error: "pending_claim_not_found" }, 404);
-    const { data: occupied } = await db.from("league_members").select("id,profile_id").eq("league_id", league.id).eq("fantasy_team_id", claim.fantasy_team_id).maybeSingle();
-    if (occupied && occupied.profile_id !== claim.profile_id) return json({ error: "team_already_assigned" }, 409);
-    const { data: existing } = await db.from("league_members").select("id,role").eq("league_id", league.id).eq("profile_id", claim.profile_id).maybeSingle();
-    if (existing) {
-      const { error } = await db.from("league_members").update({ fantasy_team_id: claim.fantasy_team_id, fantasy_team_name: claim.fantasy_team_name }).eq("id", existing.id); if (error) return json({ error: "membership_update_failed" }, 500);
-    } else {
-      const { error } = await db.from("league_members").insert({ league_id: league.id, profile_id: claim.profile_id, fantasy_team_id: claim.fantasy_team_id, fantasy_team_name: claim.fantasy_team_name, role: "OWNER" }); if (error) return json({ error: "membership_create_failed" }, 500);
-    }
-    await db.from("team_claims").update({ status: "APPROVED", reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: body?.note || null }).eq("id", claim.id);
-    return json({ ok: true, status: "APPROVED", claim_id: claim.id });
-  }
-
-  if (action === "reject_claim") {
-    const claimId = String(body?.claim_id || ""); if (!claimId) return json({ error: "claim_id_required" }, 400);
-    const { error } = await db.from("team_claims").update({ status: "REJECTED", reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: body?.note || null }).eq("id", claimId).eq("league_id", league.id).eq("status", "PENDING");
-    if (error) return json({ error: "claim_reject_failed" }, 500); return json({ ok: true, status: "REJECTED" });
+  if (action === "approve_claim" || action === "reject_claim") {
+    const claimId = String(body?.claim_id || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claimId))
+      return json({ error: "claim_id_required" }, 400);
+    if (body?.note != null && (typeof body.note !== "string" || body.note.length > 500))
+      return json({ error: "claim_note_too_long" }, 400);
+    return claimResult(db, { p_actor: user.id, p_league: league.id,
+      p_action: action === "approve_claim" ? "APPROVE" : "REJECT", p_claim: claimId, p_note: body?.note || null });
   }
 
   if (action === "reject_proposal") {
