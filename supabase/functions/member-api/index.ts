@@ -31,12 +31,6 @@ function easternParts(date = new Date()) {
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
   return { weekday: get("weekday"), year: Number(get("year")), month: Number(get("month")), day: Number(get("day")), hour: Number(get("hour")), minute: Number(get("minute")) };
 }
-function submissionWindowOpen(date = new Date()) {
-  const p = easternParts(date);
-  if (p.weekday === "Mon") return false;
-  if (p.weekday === "Sun" && (p.hour > 11 || (p.hour === 11 && p.minute >= 0))) return false;
-  return true;
-}
 function zonedToUtc(year: number, month: number, day: number, hour: number, minute: number): Date {
   let guess = Date.UTC(year, month - 1, day, hour, minute, 0);
   const fmt = new Intl.DateTimeFormat("en-US", { timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -55,11 +49,45 @@ function weeklyHardDeadline(now = new Date()): Date {
   const target = new Date(Date.UTC(p.year, p.month - 1, p.day + daysUntilSunday, 12, 0, 0));
   return zonedToUtc(target.getUTCFullYear(), target.getUTCMonth() + 1, target.getUTCDate(), 11, 0);
 }
+function awardWindowOpen(award: any, now = new Date()) {
+  if (!award?.identified_at || !award?.source_observed_at || award.source_status !== "WINNER_IDENTIFIED"
+    || award.requires_commissioner_resolution || award.week < 1 || award.week > 14) return false;
+  const identified = new Date(award.identified_at);
+  if (!Number.isFinite(identified.getTime())) return false;
+  const deadline = weeklyHardDeadline(identified);
+  const p = easternParts(deadline);
+  const tuesday = new Date(Date.UTC(p.year, p.month - 1, p.day - 5));
+  const opens = zonedToUtc(tuesday.getUTCFullYear(), tuesday.getUTCMonth()+1, tuesday.getUTCDate(), 9, 0);
+  const observed = new Date(award.source_observed_at);
+  return identified <= now && observed >= opens && observed <= now && now >= opens && now < deadline
+    && easternParts(identified).year === YEAR;
+}
 function american(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value !== 0) return Math.trunc(value);
-  if (typeof value !== "string") return null;
-  const parsed = Number(value.trim().replace("+", ""));
-  return Number.isFinite(parsed) && parsed !== 0 ? Math.trunc(parsed) : null;
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^[+-]?\d+$/.test(value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && Math.abs(parsed) >= 100 && Math.abs(parsed) <= 2147483647 ? parsed : null;
+}
+function numericLine(value: unknown): number | null {
+  if (value == null) return null;
+  if ((typeof value !== "number" && typeof value !== "string") || String(value).trim() === "") throw new Error("invalid_line");
+  const n = Number(value);
+  if (!Number.isFinite(n) || Math.abs(n)>100000) throw new Error("invalid_line");
+  return n;
+}
+function requestedLegs(value: any) {
+  if (!Array.isArray(value) || value.length<1 || value.length>12) throw new Error("legs_limit");
+  const seen = new Set();
+  return value.map((leg: any) => {
+    if (typeof leg?.event_id !== "string" || !/^[A-Za-z0-9_-]{1,150}$/.test(leg.event_id)
+      || typeof leg?.odd_id !== "string" || !/^[A-Za-z0-9_-]{1,200}$/.test(leg.odd_id)
+      || !["NFL","NCAAF"].includes(leg.sport) || american(leg.odds)===null) throw new Error("invalid_leg");
+    const key = leg.event_id + ":" + leg.odd_id;
+    if (seen.has(key)) throw new Error("duplicate_selection");
+    seen.add(key);
+    return { event_id: leg.event_id, odd_id: leg.odd_id, sport: leg.sport,
+      odds: american(leg.odds), line: numericLine(leg.line) };
+  });
 }
 async function espnTeams(): Promise<{ team_id: string, team_name: string }[]> {
   const espnS2 = Deno.env.get("ESPN_S2");
@@ -99,39 +127,65 @@ async function authenticatedContext(req: Request) {
 async function currentSeasonAndAward(db: any, leagueId: string) {
   const { data: season } = await db.from("seasons").select("id,year,weekly_award_cents").eq("league_id", leagueId).eq("year", YEAR).single();
   if (!season) return { season: null, award: null };
-  const { data: award } = await db.from("weekly_awards").select("id,week,fantasy_team_id,fantasy_team_name,score,source_status,identified_at").eq("season_id", season.id).order("week", { ascending: false }).limit(1).maybeSingle();
+  const { data: award } = await db.from("weekly_awards").select("id,week,fantasy_team_id,fantasy_team_name,score,source_status,identified_at,source_observed_at,requires_commissioner_resolution").eq("season_id", season.id).order("week", { ascending: false }).limit(1).maybeSingle();
   return { season, award };
+}
+function verifiedLeg(event: any, leg: any, now = new Date()) {
+  if (event?.eventID !== leg.event_id || event?.leagueID !== leg.sport) throw new Error("event_mismatch");
+  const startsAt = new Date(event?.status?.startsAt);
+  if (!Number.isFinite(startsAt.getTime()) || startsAt<=now || event.status?.started === true
+    || event.status?.cancelled === true || event.status?.ended === true) throw new Error("event_already_started");
+  const odd = event?.odds?.[leg.odd_id];
+  const book = odd?.byBookmaker?.draftkings;
+  const odds = american(book?.odds);
+  if (!odd || odd.oddID !== leg.odd_id || !book || book.available !== true || odds === null
+    || odd.periodID !== "game" || !["ml","sp","ou","yn"].includes(odd.betTypeID)) throw new Error("selection_unavailable");
+  const line = numericLine(odd.betTypeID === "sp" ? book.spread : odd.betTypeID === "ou" ? book.overUnder : null);
+  if ((["sp","ou"].includes(odd.betTypeID) && line===null)) throw new Error("selection_unavailable");
+  if (odds !== leg.odds || line !== leg.line) throw new Error("selection_changed");
+  const name = (team: any) => team?.names?.long || team?.names?.medium || team?.name || team?.teamID;
+  const home = name(event.teams?.home), away = name(event.teams?.away);
+  if (!home || !away) throw new Error("selection_unavailable");
+  const entity = odd.statEntityID;
+  const players = Array.isArray(event.players) ? event.players : Object.entries(event.players || {}).map(([id,p]: any) => ({...p, playerID:p.playerID || id}));
+  const player = players.find((p: any) => p.playerID === entity);
+  const entityName = entity === "home" ? home : entity === "away" ? away : entity === "all" ? "Game" : player?.names?.display || player?.names?.long || player?.name;
+  if (!entityName || !odd.marketName || !odd.sideID) throw new Error("selection_unavailable");
+  const lineLabel = line === null ? "" : " " + (odd.betTypeID === "sp" && line>0 ? "+" : "") + line;
+  return { sport:event.leagueID,event_id:event.eventID,odd_id:odd.oddID,event_name:away + " @ " + home,
+    market_name:String(odd.marketName),selection:entityName + " · " + odd.marketName + " · " + odd.sideID + lineLabel,
+    american_odds:odds,line_value:line,event_start_at:startsAt.toISOString(),observed_at:now.toISOString() };
 }
 async function validateLiveLegs(legs: any[]) {
   const apiKey = Deno.env.get("SPORTSGAMEODDS_API_KEY");
   if (!apiKey) throw new Error("sportsgameodds_not_configured");
   const grouped = new Map<string, any[]>();
   for (const leg of legs) {
-    const id = String(leg.event_id);
-    if (!grouped.has(id)) grouped.set(id, []);
-    grouped.get(id)!.push(leg);
+    if (!grouped.has(leg.event_id)) grouped.set(leg.event_id, []);
+    grouped.get(leg.event_id)!.push(leg);
   }
   const checked: any[] = [];
   for (const [eventId, eventLegs] of grouped) {
-    const oddIds = [...new Set(eventLegs.map((leg) => String(leg.odd_id)))];
-    const params = new URLSearchParams({ eventID: eventId, oddsAvailable: "true", bookmakerID: "draftkings", oddID: oddIds.join(","), includeAltLines: "false", limit: "1" });
-    const response = await fetch(`${SGO_URL}?${params.toString()}`, { headers: { "x-api-key": apiKey, Accept: "application/json" } });
-    if (!response.ok) throw new Error(`sportsgameodds_http_${response.status}`);
+    const params = new URLSearchParams({ eventID:eventId,oddsAvailable:"true",bookmakerID:"draftkings",
+      oddID:eventLegs.map(l=>l.odd_id).join(","),includeAltLines:"false",limit:"1" });
+    const response = await fetch(SGO_URL + "?" + params, { headers:{"x-api-key":apiKey,Accept:"application/json"},signal:AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error("selection_provider_unavailable");
     const payload = await response.json();
-    const event = Array.isArray(payload?.data) ? payload.data[0] : null;
-    if (!event) throw new Error("event_unavailable");
-    const startsAt = event?.status?.startsAt ? new Date(event.status.startsAt) : null;
-    if (!startsAt || Number.isNaN(startsAt.getTime()) || startsAt <= new Date()) throw new Error("event_already_started");
-    for (const leg of eventLegs) {
-      const odd = event?.odds?.[leg.odd_id];
-      const book = odd?.byBookmaker?.draftkings;
-      if (!odd || !book || book.available !== true || american(book.odds) === null) throw new Error("selection_unavailable");
-      checked.push({ ...leg, current_odds: american(book.odds), event_start_at: startsAt.toISOString(), observed_at: new Date().toISOString() });
-    }
+    const event = Array.isArray(payload?.data) ? payload.data.find((e:any)=>e.eventID===eventId) : null;
+    if (!event || payload.success===false) throw new Error("event_unavailable");
+    for (const leg of eventLegs) checked.push(verifiedLeg(event,leg));
   }
   return checked;
 }
-
+function weeklyError(error: any) {
+  const known = new Set(["invalid_submission","invalid_weekly_choice","season_not_found","approved_team_membership_required",
+    "submission_retry_conflict","weekly_winner_not_ready","not_this_weeks_high_scorer","stale_weekly_award",
+    "weekly_submission_window_closed","weekly_decision_already_locked","weekly_ticket_already_submitted",
+    "allocation_exceeded","invalid_legs","duplicate_selection","invalid_or_stale_selection"]);
+  if (known.has(error?.message)) return json({error:error.message},409);
+  console.error("weekly_submission_failed",error?.code);
+  return json({error:"weekly_submission_failed"},500);
+}
 
 async function claimResult(db: any, args: Record<string, unknown>) {
   const { data, error } = await db.rpc("manage_team_claim", args);
@@ -176,14 +230,17 @@ Deno.serve(async (req: Request) => {
       claim,
       current_award: award,
       eligible_weekly_winner: eligible,
-      submission_window_open: submissionWindowOpen(),
+      submission_window_open: awardWindowOpen(award),
       team_directory: teams.map((team) => ({ ...team, claimed: occupiedIds.has(team.team_id), pending_claim: pendingIds.has(team.team_id) })),
       current_proposal: proposal,
     });
   }
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  const body = await req.json().catch(() => ({}));
+  const raw = await req.text();
+  if (raw.length>32768) return json({error:"request_too_large"},413);
+  let body;
+  try { body=JSON.parse(raw); } catch { return json({error:"invalid_json"},400); }
   const action = body?.action;
 
   if (action === "claim_team") {
@@ -207,62 +264,32 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "submit_weekly_bet") {
-    if (!membership?.id || !membership?.fantasy_team_id) return json({ error: "approved_team_membership_required" }, 403);
-    const { season, award } = await currentSeasonAndAward(db, league.id);
-    if (!season || !award || award.source_status !== "WINNER_IDENTIFIED") return json({ error: "weekly_winner_not_ready" }, 409);
-    if (String(award.fantasy_team_id) !== String(membership.fantasy_team_id)) return json({ error: "not_this_weeks_high_scorer" }, 403);
-    if (!submissionWindowOpen()) return json({ error: "weekly_submission_window_closed" }, 409);
-
-    const choice = body?.choice === "ride" || body?.choice === "LET_IT_RIDE_100" ? "LET_IT_RIDE_100" : body?.choice === "split" || body?.choice === "SPLIT_50_50" ? "SPLIT_50_50" : null;
-    if (!choice) return json({ error: "invalid_weekly_choice" }, 400);
-    const cashCents = choice === "SPLIT_50_50" ? 5000 : 0;
-    const wagerCents = choice === "SPLIT_50_50" ? 5000 : 10000;
-    const legs = Array.isArray(body?.legs) ? body.legs.slice(0, 12) : [];
-    if (!legs.length || legs.length > 12) return json({ error: "legs_required" }, 400);
-    for (const leg of legs) {
-      if (!leg?.event_id || !leg?.odd_id || !["NFL","NCAAF"].includes(String(leg.sport))) return json({ error: "invalid_leg" }, 400);
-    }
+    if (!membership?.id || !membership?.fantasy_team_id) return json({error:"approved_team_membership_required"},403);
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuid.test(body?.request_id || "") || !uuid.test(body?.award_id || "")) return json({error:"invalid_submission"},400);
+    const choice = ["split","SPLIT_50_50"].includes(body?.choice) ? "SPLIT_50_50" :
+      ["ride","LET_IT_RIDE_100"].includes(body?.choice) ? "LET_IT_RIDE_100" : null;
+    if (!choice) return json({error:"invalid_weekly_choice"},400);
+    let legs;
+    try { legs=requestedLegs(body.legs); } catch(error) { return json({error:(error as Error).message},400); }
+    const {season} = await currentSeasonAndAward(db,league.id);
+    if (!season) return json({error:"season_not_found"},409);
+    const args = {p_actor:user.id,p_season:season.id,p_award:body.award_id,p_request:body.request_id,p_choice:choice,
+      p_request_body:{award_id:body.award_id,choice,legs}};
+    const preflight = await db.rpc("submit_weekly_ticket",args);
+    if (preflight.error) return weeklyError(preflight.error);
+    if (preflight.data?.ok) return json(preflight.data);
+    if (preflight.data?.validation_required !== true) return json({error:"weekly_submission_failed"},500);
     let checked;
-    try { checked = await validateLiveLegs(legs); }
-    catch (error) { return json({ error: error instanceof Error ? error.message : "selection_validation_failed" }, 409); }
-
-    const { data: existingDecision } = await db.from("weekly_decisions").select("id,member_id,choice,wager_budget_cents").eq("weekly_award_id", award.id).maybeSingle();
-    if (existingDecision && (existingDecision.member_id !== membership.id || existingDecision.choice !== choice)) return json({ error: "weekly_decision_already_locked" }, 409);
-    let decision = existingDecision;
-    if (!decision) {
-      const { data, error } = await db.from("weekly_decisions").insert({ weekly_award_id: award.id, member_id: membership.id, choice, cash_payout_cents: cashCents, wager_budget_cents: wagerCents }).select("id,member_id,choice,wager_budget_cents").single();
-      if (error || !data) return json({ error: "weekly_decision_create_failed" }, 500);
-      decision = data;
-      if (cashCents > 0) await db.from("ledger_transactions").insert({ season_id: season.id, account: "CASH_PAYOUTS", transaction_type: "WEEKLY_HIGH_SCORE_CASH", amount_cents: -cashCents, weekly_award_id: award.id, description: `Week ${award.week} high-score cash payout`, occurred_at: new Date().toISOString(), created_by: user.id });
+    try { checked=await validateLiveLegs(legs); }
+    catch(error) {
+      const known = ["selection_changed","selection_unavailable","event_already_started","event_mismatch","event_unavailable","invalid_line"];
+      const message = (error as Error).message;
+      return json({error:known.includes(message)?message:"selection_provider_unavailable"},409);
     }
-    const { data: existingProposal } = await db.from("bet_proposals").select("id,status").eq("weekly_decision_id", decision.id).in("status", ["SUBMITTED","AWAITING_COMMISSIONER_PLACEMENT","PLACED"]).maybeSingle();
-    if (existingProposal) return json({ error: "weekly_ticket_already_submitted", proposal_id: existingProposal.id, status: existingProposal.status }, 409);
-
-    const sports = [...new Set(checked.map((leg: any) => String(leg.sport)))];
-    const proposalSport = sports.length === 1 ? sports[0] : "FOOTBALL";
-    const firstStart = checked.map((leg: any) => new Date(leg.event_start_at).getTime()).sort((a: number,b: number) => a-b)[0];
-    const hardDeadline = weeklyHardDeadline();
-    const estimatedOdds = american(body?.estimated_american_odds);
-    const estimatedReturnCents = Number.isInteger(body?.estimated_return_cents) ? body.estimated_return_cents : null;
-    const now = new Date().toISOString();
-    const { data: proposal, error: proposalError } = await db.from("bet_proposals").insert({
-      season_id: season.id, weekly_decision_id: decision.id, submitted_by: membership.id, category: "WEEKLY", sport: proposalSport,
-      execution_book: "draftkings", proposed_stake_cents: wagerCents, estimated_american_odds: estimatedOdds, estimated_return_cents: estimatedReturnCents,
-      status: "AWAITING_COMMISSIONER_PLACEMENT", first_event_start_at: new Date(firstStart).toISOString(), hard_deadline_at: hardDeadline.toISOString(), submitted_at: now,
-    }).select("id,status,proposed_stake_cents,submitted_at").single();
-    if (proposalError || !proposal) return json({ error: "proposal_create_failed" }, 500);
-
-    const legRows = checked.map((leg: any, index: number) => ({
-      proposal_id: proposal.id, provider: "sportsgameodds", bookmaker: "draftkings", sport: String(leg.sport), event_id: String(leg.event_id), market_id: leg.market_id || null,
-      odd_id: String(leg.odd_id), event_name: String(leg.event_name || leg.event_id), market_name: String(leg.market || "Market"), selection: String(leg.selection || leg.odd_id),
-      american_odds: leg.current_odds, event_start_at: leg.event_start_at, observed_at: leg.observed_at, sort_order: index,
-    }));
-    const { error: legsError } = await db.from("bet_proposal_legs").insert(legRows);
-    if (legsError) {
-      await db.from("bet_proposals").delete().eq("id", proposal.id);
-      return json({ error: "proposal_legs_create_failed" }, 500);
-    }
-    return json({ ok: true, proposal, choice, cash_payout_cents: cashCents, wager_budget_cents: wagerCents });
+    const result = await db.rpc("submit_weekly_ticket",{...args,p_legs:checked});
+    if (result.error) return weeklyError(result.error);
+    return json(result.data);
   }
 
   return json({ error: "unknown_action" }, 400);

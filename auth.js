@@ -12,6 +12,7 @@ const authClient = window.supabase.createClient(AUTH_SUPABASE_URL, LIVE_PUBLISHA
 let authSession = null;
 let memberSessionData = null;
 let commissionerData = null;
+let pendingWeeklySubmission = null;
 
 function authHeaders() {
   return {
@@ -70,6 +71,9 @@ function memberErrorText(code) {
     not_this_weeks_high_scorer: 'Only this week’s high-scoring fantasy team can submit the league wager.',
     weekly_ticket_already_submitted: 'This week’s ticket has already been submitted.',
     selection_unavailable: 'At least one DraftKings selection is no longer available. Refresh the live market and try again.',
+    selection_changed: 'DraftKings changed a price or line. Refresh the markets and review your ticket before submitting again.',
+    stale_weekly_award: 'The weekly award has changed. Refresh your league account before submitting.',
+    legs_limit: 'Choose between 1 and 12 selections.',
     event_already_started: 'At least one selected event has already started.',
   };
   return map[code] || String(code || 'Request failed').replaceAll('_', ' ');
@@ -259,7 +263,7 @@ function updateSubmissionAccess() {
   button.disabled = false;
   if (!authSession) button.textContent = 'Sign in to submit';
   else if (!memberSessionData?.membership?.fantasy_team_id) button.textContent = 'Claim team to submit';
-  else if (memberSessionData?.current_proposal?.status) { button.textContent = 'Ticket submitted ✓'; button.disabled = true; }
+  else if (['SUBMITTED', 'AWAITING_COMMISSIONER_PLACEMENT', 'PLACED'].includes(memberSessionData?.current_proposal?.status)) { button.textContent = 'Ticket submitted ✓'; button.disabled = true; }
   else if (!memberSessionData?.eligible_weekly_winner) button.textContent = 'Weekly high scorer only';
   else if (!memberSessionData?.submission_window_open) { button.textContent = 'Submission window closed'; button.disabled = true; }
   else button.textContent = 'Submit to commissioner';
@@ -278,6 +282,7 @@ async function submitPersistentTicket() {
   const combinedOdds = state.legs.length === 1 ? state.legs[0].odds : decimalToAmerican(decimal);
   const payload = {
     action: 'submit_weekly_bet',
+    award_id: memberSessionData.current_award?.id,
     choice: state.choice,
     estimated_american_odds: combinedOdds,
     estimated_return_cents: Math.round(stake * decimal * 100),
@@ -297,12 +302,17 @@ async function submitPersistentTicket() {
     })),
   };
   if (payload.legs.some((leg) => !leg.event_id || !leg.odd_id)) return showToast('Wait for live DraftKings markets to load before submitting.');
+  const fingerprint = JSON.stringify({ user: authSession.user.id, award: payload.award_id, choice: payload.choice,
+    legs: payload.legs.map(({ event_id, odd_id, sport, odds, line }) => ({ event_id, odd_id, sport, odds, line })) });
+  if (pendingWeeklySubmission?.fingerprint !== fingerprint) pendingWeeklySubmission = { fingerprint, key: crypto.randomUUID() };
+  payload.request_id = pendingWeeklySubmission.key;
   const button = document.querySelector('#submitButton');
   const original = button.textContent;
   button.disabled = true;
   button.textContent = 'Validating live ticket…';
   try {
     const result = await memberRequest('POST', payload);
+    pendingWeeklySubmission = null;
     showToast('Ticket submitted to the commissioner.');
     await refreshMemberState();
     if (result?.proposal?.id) document.querySelector('#commissioner')?.scrollIntoView({ behavior: 'smooth' });

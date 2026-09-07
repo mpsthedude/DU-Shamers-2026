@@ -4,6 +4,15 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 
 ## Repair update: 2026-09-07
 
+### Weekly submission increment
+
+- Migration 20260907131836_atomic_weekly_submissions and member-api v3 are deployed. submit_weekly_ticket atomically saves the immutable weekly choice, cash ledger allocation, proposal and validated legs. Season/award row locks and unique indexes protect retries and one active proposal per decision. Rejected/expired proposals can be replaced with the same locked choice without another cash entry.
+- Client supplies award ID and a stable retry UUID for the unchanged ticket. The server stores a canonical request for conflict detection. Matching saved retries return before fresh provider calls, including after the deadline; new requests check winner membership, latest award, Weeks 1-14, unresolved ties, award observation time and allocation before validating markets.
+- The submission window is Tuesday 09:00 to Sunday 11:00 America/New_York in the award identification week. An older award does not gain a new deadline the next week. This relies on the trusted winner sync assigning the correct ESPN week; sync INSERT privileges and correction/decision coordination remain a separate repair. Auth sign-in/ESPN end-to-end behavior remains unverified.
+- Rejects >12 legs (no silent truncation), duplicates, malformed odds and changed DraftKings prices/lines. Persisted event/sport/market/selection descriptions come from the provider. Stored line_value preserves the accepted spread/total. Game selections now carry their numeric line to submission. Unverified client combined estimates are not stored; actual combined DK odds are recorded at manual placement.
+- Thirteen Node tests pass. Rolled-back service_role SQL tests passed before/after deployment for both choices, failed ledger/proposal/leg writes, replay conflicts, rejected replacements, cash uniqueness, placement stake, wrong winner, stale selections, allocation limits and DST-aware deadline boundaries. Tests temporarily substitute the RPC clock inside the rollback transaction only; production clock restoration was verified. No live paid provider calls, test identities, decisions, proposals or bets persisted; original ledger still has four rows.
+- Cash entries represent the weekly cash allocation in the existing accounting model; no physical cash transfer occurs. Paid-call global budgets/cache/quotas are still unfinished, as are winner sync write repair, actual sign-in, leaderboard and saved roasts. Next priority is closing paid-call exposure before group rollout.
+
 ### Team claims increment
 
 - Migration 20260907130332_atomic_team_claims adds service-only SECURITY INVOKER manage_team_claim. A transaction-level advisory lock per league serializes claim transitions; existing unique indexes remain the final constraint. ESPN directory validation happens before the transaction.

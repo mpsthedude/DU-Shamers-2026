@@ -234,6 +234,7 @@ function normalizeDraftKingsSelection(event, offer) {
     providerEventId: event.event_id,
     eventStartAt: event.starts_at,
     fairOdds: offer.fair_odds ?? null,
+    line: cleanNumber(currentLine),
   };
 }
 
