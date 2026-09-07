@@ -20,6 +20,7 @@ function authHeaders() {
     Authorization: `Bearer ${authSession?.access_token || LIVE_PUBLISHABLE_KEY}`,
   };
 }
+window.duShamersAuthHeaders = authHeaders;
 
 function createMemberUi() {
   const topActions = document.querySelector('.topbar-actions');
@@ -341,6 +342,27 @@ async function loadCommissionerConsole() {
   }
 }
 
+function providerBudgetMarkup() {
+  const b=commissionerData?.provider_budget, p=b?.policy;
+  if(!p) return '';
+  const usd=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:4}).format(Number(v||0)/1000000);
+  const fields=[['daily_request_limit','Daily request cap'],['monthly_request_limit','Monthly request cap'],
+    ['per_user_daily_limit','Daily cap per owner'],['daily_budget_microusd','Daily budget ($)'],
+    ['monthly_budget_microusd','Monthly budget ($)'],['max_request_cost_microusd','Worst-case cost per request ($)']];
+  return `<article class="commissioner-persistent-item">
+    <h3>Provider spending · ${p.enabled?'Enabled':'Paused'}</h3>
+    <p>Today: ${Number(b.day_requests)} / ${Number(p.daily_request_limit)} requests · ${usd(b.day_reserved_microusd)} reserved of ${usd(p.daily_budget_microusd)}.
+    Month: ${Number(b.month_requests)} / ${Number(p.monthly_request_limit)} requests · ${usd(b.month_reserved_microusd)} reserved of ${usd(p.monthly_budget_microusd)}.</p>
+    <p>Reserved amounts are conservative estimates, not confirmed charges. Failed calls stay counted. Limits reset at midnight UTC. Hosted intelligence remains disabled.</p>
+    <div class="placement-form">${fields.map(([key,label])=>`<label>${label}<input class="commissioner-input" id="budget-${key}" type="number" min="0" step="${key.endsWith('microusd')?'0.000001':'1'}" value="${Number(p[key])/(key.endsWith('microusd')?1000000:1)}"></label>`).join('')}</div>
+    <p>Set the worst-case cost to cover a provider request returning up to 40 events. Verify it against your provider plan before enabling. No automated billing reconciliation is available yet.</p>
+    <label><input id="budget-enabled" type="checkbox" ${p.enabled?'checked':''}> Enable paid odds refreshes within these limits</label>
+    <div class="commissioner-actions"><button class="commissioner-action primary" data-save-budget>Save limits</button>
+    <button class="commissioner-action danger" data-pause-budget>Pause paid calls</button>
+    <button class="commissioner-action" data-refresh-snapshots>Refresh market snapshots</button></div>
+  </article>`;
+}
+
 function renderCommissionerConsole() {
   const panel = document.querySelector('#commissioner');
   const queue = document.querySelector('#commissionerQueue');
@@ -378,7 +400,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = html;
+  queue.innerHTML = providerBudgetMarkup() + html;
   bindCommissionerActions();
 }
 
@@ -400,6 +422,21 @@ function bindCommissionerActions() {
       }
     }));
   }
+  bind('[data-save-budget]', async () => {
+    const policy={enabled:document.querySelector('#budget-enabled').checked};
+    for(const key of ['daily_request_limit','monthly_request_limit','per_user_daily_limit','daily_budget_microusd','monthly_budget_microusd','max_request_cost_microusd']){
+      const value=Number(document.querySelector('#budget-'+key).value);
+      policy[key]=key.endsWith('microusd')?Math.round(value*1000000):value;
+    }
+    if(!window.confirm('Save these provider spending limits'+(policy.enabled?' and enable paid odds refreshes?':' with paid refreshes paused?'))) return false;
+    await commissionerRequest('POST',{action:'set_provider_budget',policy});
+    showToast('Provider spending limits saved.');
+  });
+  bind('[data-pause-budget]', async () => {
+    await commissionerRequest('POST',{action:'pause_provider_calls'});
+    showToast('New paid provider calls are paused.');
+  });
+  bind('[data-refresh-snapshots]', async () => { await loadLiveDraftKingsMarkets(); });
   bind('[data-approve-claim]', async (button) => {
     if (!window.confirm('Approve this fantasy-team claim?')) return false;
     await commissionerRequest('POST', { action: 'approve_claim', claim_id: button.dataset.approveClaim });

@@ -2,11 +2,13 @@ const LIVE_ANALYZE_URL = `${LIVE_API_ROOT}/analyze-ticket`;
 let lastTicketAnalysis = null;
 
 function pct(value, digits = 1) {
+  if (value == null || value === '') return '—';
   const number = Number(value);
   return Number.isFinite(number) ? `${(number * 100).toFixed(digits)}%` : '—';
 }
 
 function pp(value) {
+  if (value == null || value === '') return '—';
   const number = Number(value);
   if (!Number.isFinite(number)) return '—';
   return `${number > 0 ? '+' : ''}${number.toFixed(2)} pp`;

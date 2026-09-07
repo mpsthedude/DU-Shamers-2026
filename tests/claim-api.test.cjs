@@ -16,6 +16,7 @@ function harness(slug, isCommissioner = false, rpcError = null) {
     return { data: { ok: true }, error: rpcError };
   } };
   const ctx = vm.createContext({ Response, Request, URL, URLSearchParams, console: { error() {} },
+    paidHandler: fn => req => fn(req, async () => { throw new Error('unexpected_provider_call'); }),
     createClient: () => ({}), Deno: { env: { get: () => 'fixture' }, serve: fn => { handler = fn; } } });
   const source = fs.readFileSync(path.join(__dirname, '../supabase/functions', slug, 'index.ts'), 'utf8')
     .replace(/^import .*;\r?\n/gm, '');

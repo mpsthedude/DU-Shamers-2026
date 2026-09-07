@@ -74,7 +74,10 @@ Deno.serve(async (req: Request) => {
     const submitterMap = new Map((submitters || []).map((m: any) => [m.id, { ...m, display_name: profileNames.get(m.profile_id) || "League member" }]));
     const legsByProposal = new Map<string,any[]>();
     for (const leg of proposalLegs || []) { if (!legsByProposal.has(leg.proposal_id)) legsByProposal.set(leg.proposal_id, []); legsByProposal.get(leg.proposal_id)!.push(leg); }
+    const {data:providerBudget,error:budgetError}=await db.rpc("provider_budget_status");
+    if(budgetError) return json({error:"provider_budget_read_failed"},500);
     return json({
+      provider_budget:providerBudget,
       commissioner,
       claims: (claimsResult.data || []).map((c: any) => ({ ...c, display_name: profileNames.get(c.profile_id) || "League member" })),
       proposals: (proposalsResult.data || []).map((p: any) => ({ ...p, submitter: submitterMap.get(p.submitted_by) || null, legs: legsByProposal.get(p.id) || [] })),
@@ -84,6 +87,27 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+
+  if (action === "set_provider_budget") {
+    const policy=body?.policy;
+    const fields=["daily_request_limit","monthly_request_limit","daily_budget_microusd","monthly_budget_microusd",
+      "max_request_cost_microusd","per_user_daily_limit"];
+    if(!policy || typeof policy.enabled!=="boolean" || fields.some(k=>!Number.isSafeInteger(policy[k]) || policy[k]<0 || policy[k]>1000000000000)
+      || policy.daily_request_limit>100000 || policy.monthly_request_limit>1000000 || policy.per_user_daily_limit>10000)
+      return json({error:"invalid_provider_budget"},400);
+    if(policy.enabled && (fields.some(k=>policy[k]===0) || policy.daily_request_limit>policy.monthly_request_limit
+      || policy.daily_budget_microusd>policy.monthly_budget_microusd || policy.max_request_cost_microusd>policy.daily_budget_microusd))
+      return json({error:"invalid_provider_budget"},400);
+    const values=Object.fromEntries(fields.map(k=>[k,policy[k]]));
+    const {error}=await db.from("provider_budget").update({...values,enabled:policy.enabled,updated_at:new Date().toISOString()}).eq("provider","sportsgameodds");
+    if(error) return json({error:"provider_budget_update_failed"},500);
+    return json({ok:true});
+  }
+  if (action === "pause_provider_calls") {
+    const {error}=await db.from("provider_budget").update({enabled:false,updated_at:new Date().toISOString()}).eq("provider","sportsgameodds");
+    if(error) return json({error:"provider_budget_update_failed"},500);
+    return json({ok:true});
+  }
 
   if (action === "approve_claim" || action === "reject_claim") {
     const claimId = String(body?.claim_id || "");

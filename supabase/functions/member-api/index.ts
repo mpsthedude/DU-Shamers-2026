@@ -1,3 +1,4 @@
+import { paidHandler } from "../_shared/paid.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -156,7 +157,7 @@ function verifiedLeg(event: any, leg: any, now = new Date()) {
     market_name:String(odd.marketName),selection:entityName + " · " + odd.marketName + " · " + odd.sideID + lineLabel,
     american_odds:odds,line_value:line,event_start_at:startsAt.toISOString(),observed_at:now.toISOString() };
 }
-async function validateLiveLegs(legs: any[]) {
+async function validateLiveLegs(legs: any[], paidFetch: any) {
   const apiKey = Deno.env.get("SPORTSGAMEODDS_API_KEY");
   if (!apiKey) throw new Error("sportsgameodds_not_configured");
   const grouped = new Map<string, any[]>();
@@ -168,12 +169,12 @@ async function validateLiveLegs(legs: any[]) {
   for (const [eventId, eventLegs] of grouped) {
     const params = new URLSearchParams({ eventID:eventId,oddsAvailable:"true",bookmakerID:"draftkings",
       oddID:eventLegs.map(l=>l.odd_id).join(","),includeAltLines:"false",limit:"1" });
-    const response = await fetch(SGO_URL + "?" + params, { headers:{"x-api-key":apiKey,Accept:"application/json"},signal:AbortSignal.timeout(10000) });
+    const response = await paidFetch(SGO_URL + "?" + params, { headers:{"x-api-key":apiKey,Accept:"application/json"},signal:AbortSignal.timeout(10000) }, {allowMember:true});
     if (!response.ok) throw new Error("selection_provider_unavailable");
     const payload = await response.json();
     const event = Array.isArray(payload?.data) ? payload.data.find((e:any)=>e.eventID===eventId) : null;
     if (!event || payload.success===false) throw new Error("event_unavailable");
-    for (const leg of eventLegs) checked.push(verifiedLeg(event,leg));
+    for (const leg of eventLegs) checked.push({...verifiedLeg(event,leg),observed_at:response.headers.get("x-provider-observed-at") || new Date().toISOString()});
   }
   return checked;
 }
@@ -199,7 +200,7 @@ async function claimResult(db: any, args: Record<string, unknown>) {
   return json({ error: "claim_transaction_failed" }, 500);
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const ctx: any = await authenticatedContext(req);
   if (ctx.error) return ctx.error;
@@ -281,7 +282,7 @@ Deno.serve(async (req: Request) => {
     if (preflight.data?.ok) return json(preflight.data);
     if (preflight.data?.validation_required !== true) return json({error:"weekly_submission_failed"},500);
     let checked;
-    try { checked=await validateLiveLegs(legs); }
+    try { checked=await validateLiveLegs(legs,paidFetch); }
     catch(error) {
       const known = ["selection_changed","selection_unavailable","event_already_started","event_mismatch","event_unavailable","invalid_line"];
       const message = (error as Error).message;
@@ -293,4 +294,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return json({ error: "unknown_action" }, 400);
-});
+}));

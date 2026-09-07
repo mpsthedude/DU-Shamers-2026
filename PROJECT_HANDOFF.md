@@ -4,6 +4,18 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 
 ## Repair update: 2026-09-07
 
+### Paid provider controls increment
+
+- Migration 20260907133445_provider_spending_gate adds service-only budget, reservation and 60-second cache tables. Global policy is disabled with zero allowances. No spending amount was chosen or enabled during development.
+- Shared _shared/paid.ts gates every active SGO request in markets v9, props v3, analyzer v2 and member-api v4. Commissioner-api v5 adds budget status/settings/pause under Auth plus the email allowlist. Futures v5 and integration-health v4 retire public probes with HTTP 410. Hosted intelligence URL dispatch is removed pending a budgeted adapter.
+- A locked policy row serializes reservations before network dispatch. Daily/monthly request and reserved-cost caps, per-user daily quotas, two concurrent requests, same-key deduplication, 15-second network timeout and two-minute leases apply globally. No automatic retries or fallback providers. Failed/ambiguous reservations remain counted; expired leases become UNKNOWN without a refund.
+- Fresh general odds/analysis calls require current commissioner authorization. Public visitors can read fresh cached snapshots. Approved weekly winners can validate under the same caps after eligibility preflight. Credentials stay server-side; canonical query keys and original observation times are shared across callers.
+- Dollar limits use a commissioner-configured worst-case charge per request (including up to 40 returned events). These are estimated allowances, not independently verified provider charges. Actual charge/token reconciliation is not implemented; actual_microusd stays null. Verify plan-specific costs before enabling. Hosted model calls remain disabled.
+- Commissioner UI includes counts, reserved amounts, limit inputs, explicit enable checkbox and pause/refresh buttons. Market failures clear sample lines. Props browser cache expires after 60 seconds and ignores late responses for a different active game. Missing analysis probabilities remain unavailable.
+- 23 Node checks pass, including actual endpoint execution with a disabled gate and zero provider dispatch. Rolled-back service_role SQL checks cover disabled/auth failures, cache reuse, in-flight limits, monetary/request limits, user quotas and failed/expired reservation retention. No simultaneous-session stress test or real authenticated paid dispatch yet.
+- Live verification: bank 200; member/commissioner 401 with public key; markets/props/analyzer 503 paid_requests_disabled; probes 410. Disabled policy, zero provider requests/cache rows/test users, four unchanged ledger rows. Advisors: 19 intentional RLS/no-policy INFO notices, two existing profile-trigger WARN notices.
+- Deploy shared consumers with both <slug>/index.ts and _shared/paid.ts; do not upload only their entrypoint. Next: cached ESPN leaderboard/earnings, winner-sync write/correction coordination and saved roast drafts/archive. Actual sign-in, provider-plan calibration and historical schema export remain outstanding.
+
 ### Weekly submission increment
 
 - Migration 20260907131836_atomic_weekly_submissions and member-api v3 are deployed. submit_weekly_ticket atomically saves the immutable weekly choice, cash ledger allocation, proposal and validated legs. Season/award row locks and unique indexes protect retries and one active proposal per decision. Rejected/expired proposals can be replaced with the same locked choice without another cash entry.

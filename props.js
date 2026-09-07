@@ -210,7 +210,8 @@ async function openPlayerProps(eventId) {
   document.querySelector('#propSearch').value = '';
   document.querySelector('#propCategory').value = 'ALL';
 
-  if (propsCache.has(event.id)) {
+  const cachedObservation = propsCache.get(event.id)?.provider_cache?.oldest_observed_at;
+  if (cachedObservation && Date.now() - new Date(cachedObservation).getTime() < 60000) {
     activePropsData = propsCache.get(event.id);
     renderPropResults();
     explorer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -218,6 +219,7 @@ async function openPlayerProps(eventId) {
   }
 
   document.querySelector('#propsResults').innerHTML = '<div class="props-loading">Loading live DraftKings player props…</div>';
+  activePropsData = null;
   explorer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   try {
@@ -229,12 +231,11 @@ async function openPlayerProps(eventId) {
     if (!response.ok) throw new Error(`draftkings-event-props ${response.status}`);
     const data = await response.json();
     propsCache.set(event.id, data);
-    activePropsData = data;
-    if (activePropsEventId === event.id) renderPropResults();
+    if (activePropsEventId === event.id) { activePropsData = data; renderPropResults(); }
     enhanceEventPropButtons();
   } catch (error) {
     console.warn('Unable to load player props', error);
-    document.querySelector('#propsResults').innerHTML = '<div class="props-loading">Player props are temporarily unavailable for this game.</div>';
+    if (activePropsEventId === event.id) document.querySelector('#propsResults').innerHTML = '<div class="props-loading">No fresh player-prop snapshot is available. Commissioner refreshes require configured spending limits.</div>';
   }
 }
 

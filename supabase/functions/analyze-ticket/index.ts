@@ -1,3 +1,4 @@
+import { paidHandler } from "../_shared/paid.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const cors = {
@@ -27,6 +28,7 @@ function implied(value: number | null): number | null {
 }
 function offerLine(book: any): number | null {
   const raw = book?.overUnder ?? book?.spread;
+  if (raw == null || raw === "") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
@@ -41,18 +43,18 @@ function dataRows(payload: any): any[] {
   return [];
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const apiKey = Deno.env.get("SPORTSGAMEODDS_API_KEY");
   if (!apiKey) return json({ error: "sportsgameodds_not_configured" }, 503);
 
   const body = await req.json().catch(() => null);
-  const legs = Array.isArray(body?.legs) ? body.legs.slice(0, 12) : [];
-  if (!legs.length) return json({ error: "legs_required" }, 400);
+  const legs = Array.isArray(body?.legs) ? body.legs : [];
+  if (!legs.length || legs.length>12) return json({ error: "legs_required" }, 400);
 
   const validLegs = legs.filter((leg: any) => leg && typeof leg === "object" && leg.event_id && leg.odd_id);
-  if (!validLegs.length) return json({ error: "provider_ids_required" }, 400);
+  if (validLegs.length !== legs.length || validLegs.some((leg: any) => !/^[A-Za-z0-9_-]{1,150}$/.test(String(leg.event_id)) || !/^[A-Za-z0-9_-]{1,200}$/.test(String(leg.odd_id)))) return json({ error: "provider_ids_required" }, 400);
 
   const grouped = new Map<string, any[]>();
   for (const leg of validLegs) {
@@ -74,21 +76,21 @@ Deno.serve(async (req: Request) => {
       limit: "1",
     });
     try {
-      const response = await fetch(`${SGO_URL}?${params.toString()}`, { headers: { "x-api-key": apiKey, "Accept": "application/json" } });
+      const response = await paidFetch(`${SGO_URL}?${params.toString()}`, { headers: { "x-api-key": apiKey, "Accept": "application/json" } });
       if (!response.ok) return;
       const payload = await response.json();
       const event = dataRows(payload)[0];
       if (event) eventResults.set(eventId, event);
-    } catch { /* one failed event should not discard other market evidence */ }
+    } catch (error) { throw error; }
   }));
 
   const analyzed = validLegs.map((leg: any) => {
     const event = eventResults.get(String(leg.event_id));
     const odd = event?.odds?.[leg.odd_id] ?? null;
     const dk = odd?.byBookmaker?.draftkings ?? null;
-    const dkOdds = american(dk?.odds ?? leg.odds);
-    const dkLine = offerLine(dk) ?? (Number.isFinite(Number(leg.line)) ? Number(leg.line) : null);
-    const fairOdds = american(odd?.fairOdds ?? leg.fair_odds);
+    const dkOdds = american(dk?.odds);
+    const dkLine = offerLine(dk);
+    const fairOdds = american(odd?.fairOdds);
     const fairImplied = implied(fairOdds);
     const dkImplied = implied(dkOdds);
 
@@ -106,7 +108,7 @@ Deno.serve(async (req: Request) => {
 
     const currentLine = dkLine;
     const openLineRaw = dk?.openOverUnder ?? dk?.openSpread;
-    const openLineNum = Number(openLineRaw);
+    const openLineNum = openLineRaw == null ? NaN : Number(openLineRaw);
     const openLine = Number.isFinite(openLineNum) ? openLineNum : null;
     const openOdds = american(dk?.openOdds);
 
@@ -168,22 +170,7 @@ Deno.serve(async (req: Request) => {
 
   let intelligence: any = null;
   let intelligenceStatus = "not_configured";
-  const intelligenceUrl = Deno.env.get("SPORTSBOOK_INTELLIGENCE_URL");
-  const intelligenceToken = Deno.env.get("SPORTSBOOK_INTELLIGENCE_TOKEN");
-  if (intelligenceUrl) {
-    try {
-      const response = await fetch(intelligenceUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(intelligenceToken ? { "Authorization": `Bearer ${intelligenceToken}` } : {}),
-        },
-        body: JSON.stringify({ execution_book: "draftkings", stake: body?.stake ?? null, legs: validLegs }),
-      });
-      if (response.ok) { intelligence = await response.json(); intelligenceStatus = "connected"; }
-      else intelligenceStatus = `http_${response.status}`;
-    } catch { intelligenceStatus = "unreachable"; }
-  }
+  intelligenceStatus = "disabled_until_budgeted_adapter";
 
   return json({
     generated_at: new Date().toISOString(),
@@ -200,4 +187,4 @@ Deno.serve(async (req: Request) => {
     legs: analyzed,
     sportsbook_intelligence: { status: intelligenceStatus, data: intelligence },
   });
-});
+}));

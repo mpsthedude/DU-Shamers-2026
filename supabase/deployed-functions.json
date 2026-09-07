@@ -1,19 +1,19 @@
 {
   "project_ref": "xvnkwtiydyrksucgiphi",
   "exported_at": "2026-09-07",
-  "note": "Deployed source baseline exported 2026-09-07; league-dashboard v4, commissioner-api v4, member-api v3. Other functions unchanged. Not an assurance of correctness.",
+  "note": "Deployed source exported and updated 2026-09-07. Paid provider paths share _shared/paid.ts; deploy their sibling directories together. Global fresh paid requests default disabled. See PROJECT_HANDOFF.md for verification limits.",
   "functions": [
     {
       "slug": "member-api",
-      "version": 3,
+      "version": 4,
       "verify_jwt": true,
-      "ezbr_sha256": "2bb981ca58552b86930c69d508879ec182d9f930fb06d49034f1a75f1a986d86"
+      "ezbr_sha256": "0d954fe65acb7b5c465c17e3698cc2248c820c15534754f521a6af97e43bbd38"
     },
     {
       "slug": "commissioner-api",
-      "version": 4,
+      "version": 5,
       "verify_jwt": true,
-      "ezbr_sha256": "e83845c2ac050868e2b8c5b6111789685b9eb9de59ca9226d5e21f90ef104c0a"
+      "ezbr_sha256": "84ab0fe0ce1b7311f02306ee9a59428568b22ad22c5d229c796eda866980941e"
     },
     {
       "slug": "league-dashboard",
@@ -29,33 +29,33 @@
     },
     {
       "slug": "draftkings-markets",
-      "version": 8,
+      "version": 9,
       "verify_jwt": true,
-      "ezbr_sha256": "e41870faef3f3ba360982a27afc5a238f59b65d1834f28473de6587ff08608af"
+      "ezbr_sha256": "fd30416bd8614a7522636a191076fff34fb01d5f2bb18467e4155b4eaa794a33"
     },
     {
       "slug": "draftkings-event-props",
-      "version": 2,
+      "version": 3,
       "verify_jwt": true,
-      "ezbr_sha256": "6770c2521ff2d8695b21a274a49bd36c849ebe3d17e9bf66b54f1c3589f61206"
+      "ezbr_sha256": "e6d09f3117a86e9ae648536fc56f561238686ec682736b7cfa3f6e46a7b02edb"
     },
     {
       "slug": "analyze-ticket",
-      "version": 1,
+      "version": 2,
       "verify_jwt": true,
-      "ezbr_sha256": "d87861b266701282d8307144fd63dac1eacd9165790740e30b5dc12a3901a34f"
+      "ezbr_sha256": "53f5230ba6ada4d0056c2e30d93725b6acbda660b20f55bc40820cb4e99b9f4e"
     },
     {
       "slug": "draftkings-futures",
-      "version": 4,
+      "version": 5,
       "verify_jwt": true,
-      "ezbr_sha256": "d765e9ec24422e015a113bf5a50356614c381165bdf14489d416ef9069ba08f9"
+      "ezbr_sha256": "35198d8cec935dcc3cab6afef5f4d0b99b159cb8a27fc4d35a410ade8e949710"
     },
     {
       "slug": "integration-health",
-      "version": 3,
+      "version": 4,
       "verify_jwt": true,
-      "ezbr_sha256": "2f1242ff726e8fc34fbc368f9cdc0d96dfa9e57a6f46f3009b68042a163c9140"
+      "ezbr_sha256": "eef38fb602123e812c3fa058b893ffc61a746d18dafff339f052d90281da285f"
     }
   ]
 }

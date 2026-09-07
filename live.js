@@ -4,6 +4,7 @@ const LIVE_MARKETS_URL = `${LIVE_API_ROOT}/draftkings-markets`;
 const LIVE_PUBLISHABLE_KEY = 'sb_publishable_oTJVPjW_EdOokBZfTSJKaA_GuUwJjOF';
 
 function liveHeaders() {
+  if (window.duShamersAuthHeaders) return window.duShamersAuthHeaders();
   return {
     apikey: LIVE_PUBLISHABLE_KEY,
     Authorization: `Bearer ${LIVE_PUBLISHABLE_KEY}`,
@@ -264,9 +265,9 @@ async function fetchMarketLeague(league) {
   return response.json();
 }
 
-function markMarketsLive(count) {
+function markMarketsLive(count, observed) {
   const bookNote = document.querySelector('.book-note span');
-  if (bookNote) bookNote.textContent = `${count} upcoming NFL/college events loaded from live DraftKings pricing via SportsGameOdds. Other books remain context-only.`;
+  if (bookNote) bookNote.textContent = `${count} upcoming NFL/college events loaded from shared DraftKings snapshots${observed ? ' · observed ' + new Date(observed).toLocaleString() : ''}. Prices are checked again before submission.`;
 
   const marketHeading = document.querySelector('.markets-panel .section-label');
   if (marketHeading) marketHeading.textContent = 'LIVE DRAFTKINGS BET BUILDER';
@@ -292,11 +293,16 @@ async function loadLiveDraftKingsMarkets() {
     state.legs = [];
     renderMarkets();
     renderSlip();
-    markMarketsLive(events.length);
+    const observations = results.filter(r => r.status === 'fulfilled').map(r => r.value?.provider_cache?.oldest_observed_at).filter(Boolean).sort();
+    markMarketsLive(events.length, observations[0]);
   } catch (error) {
-    console.warn('Live DraftKings markets unavailable; retaining sample markets.', error);
+    console.warn('DraftKings snapshots unavailable.', error);
+    sampleEvents.splice(0, sampleEvents.length);
+    state.legs = [];
+    renderMarkets();
+    renderSlip();
     const bookNote = document.querySelector('.book-note span');
-    if (bookNote) bookNote.textContent = 'Live DraftKings feed is temporarily unavailable. Sample markets are shown as a fallback.';
+    if (bookNote) bookNote.textContent = 'No fresh DraftKings snapshot is available. Paid refreshes stay off until the commissioner configures spending limits.';
   }
 }
 

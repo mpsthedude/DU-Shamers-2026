@@ -8,6 +8,8 @@ node --test tests/*.test.cjs
 
 The tests evaluate the actual renderer source with isolated DOM/network stubs. They do not send magic links or call paid providers.
 
+`provider-gate.test.cjs` executes the shared gateway and all six affected endpoints with stubbed Supabase/network calls. `provider-budget.sql` must run inside BEGIN/ROLLBACK with a disabled policy and empty provider request/cache tables, preferably in staging. It enables a tiny fictitious policy only inside that transaction and records fabricated responses. Rollback must leave the original disabled policy and zero reservations/cache/test users. Never run it standalone against an active provider budget.
+
 `claim-api.test.cjs` also evaluates the actual Edge Function handlers with stubbed authentication context and ESPN directory data. It tests request routing and error handling, not a live authenticated session.
 
 `team-claims.sql` follows the same BEGIN/ROLLBACK-only procedure below. It exercises the actual service_role permissions, claim ownership and league checks, retries, late cancellations, competing claims, and forced approval/self-assignment write failures. It must never persist fixtures or its temporary failure trigger.
