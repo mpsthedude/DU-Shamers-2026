@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { ticketProgress } from "../_shared/tracker.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
@@ -45,7 +46,9 @@ Deno.serve(async (req: Request) => {
     stale:Date.now()-new Date(snapshot.observed_at).getTime()>86400000,
     earnings:earningsResult.error?null:earningsResult.data,
   };
+  const trackerResult=await db.rpc('tracker_ticket_data',{p_season:season.id});
   return Response.json({
+    weekly_tracker:trackerResult.error?null:ticketProgress(trackerResult.data||[]),
     editions:editionsResult.error?null:(editionsResult.data||[]).map((e:any)=>{
       const scores=snapshot?.payload?.completed_weeks?.find((w:any)=>w.week===e.week)?.scores;
       const teams=snapshot?.payload?.teams||[];

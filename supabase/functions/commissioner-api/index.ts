@@ -82,9 +82,11 @@ Deno.serve(async (req: Request) => {
     for (const leg of proposalLegs || []) { if (!legsByProposal.has(leg.proposal_id)) legsByProposal.set(leg.proposal_id, []); legsByProposal.get(leg.proposal_id)!.push(leg); }
     const {data:providerBudget,error:budgetError}=await db.rpc("provider_budget_status");
     if(budgetError) return json({error:"provider_budget_read_failed"},500);
-    const [integrationSettings,analysisSettings]=await Promise.all([
+    const [integrationSettings,analysisSettings,objectSettings,trackerSettings]=await Promise.all([
       db.from('integration_budget').select('*').eq('singleton',true).single(),
       db.from('analysis_policy').select('*').eq('singleton',true).single(),
+      db.rpc('object_budget_status'),
+      db.from('tracker_policy').select('enabled,last_attempt_at,last_error').eq('singleton',true).single(),
     ]);
     if(integrationSettings.error || analysisSettings.error)return json({error:'integration_settings_unavailable'},500);
     const [editionsResult,sourceResult]=await Promise.all([
@@ -100,6 +102,8 @@ Deno.serve(async (req: Request) => {
       provider_budget:providerBudget,
       integration_budget:integrationSettings.data,
       analysis_policy:analysisSettings.data,
+      object_budget:objectSettings.error?null:objectSettings.data,
+      tracker_policy:trackerSettings.error?null:trackerSettings.data,
       commissioner,
       claims: (claimsResult.data || []).map((c: any) => ({ ...c, display_name: profileNames.get(c.profile_id) || "League member" })),
       proposals: (proposalsResult.data || []).map((p: any) => ({ ...p, submitter: submitterMap.get(p.submitted_by) || null, legs: legsByProposal.get(p.id) || [] })),
@@ -109,6 +113,31 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+
+  if(action==='refresh_usage'){
+    const {data:started,error}=await db.rpc('begin_usage_check');
+    if(error)return json({error:'usage_check_recent'},409);
+    try{
+      const response=await fetch('https://api.sportsgameodds.com/v2/account/usage',{headers:{'x-api-key':Deno.env.get('SPORTSGAMEODDS_API_KEY')||''},redirect:'error',signal:AbortSignal.timeout(10000)});
+      if(!response.ok)throw new Error('usage_unavailable');
+      const payload=await response.json(),monthly=payload?.data?.rateLimits?.['per-month'];
+      const used=monthly?.['current-entities'],limit=monthly?.['max-entities'];
+      if(payload.success!==true || !Number.isSafeInteger(used) || used<0 || !Number.isSafeInteger(limit) || limit<=0)throw new Error('usage_unavailable');
+      const {error:saveError}=await db.from('provider_object_policy').update({reported_used:used,reported_limit:limit,reported_at:started}).eq('singleton',true);
+      if(saveError)throw new Error('usage_unavailable');
+      return json({ok:true,used,limit});
+    }catch{return json({error:'usage_unavailable'},503);}
+  }
+  if(action==='set_object_limit'){
+    if(!Number.isInteger(body.limit) || body.limit<0 || body.limit>100000)return json({error:'invalid_object_limit'},400);
+    const {error}=await db.from('provider_object_policy').update({monthly_limit:body.limit}).eq('singleton',true);
+    return error?json({error:'object_limit_save_failed'},503):json({ok:true});
+  }
+  if(action==='set_tracker_enabled'){
+    if(typeof body.enabled!=='boolean')return json({error:'invalid_tracker_setting'},400);
+    const {error}=await db.from('tracker_policy').update({enabled:body.enabled}).eq('singleton',true);
+    return error?json({error:'tracker_setting_failed'},503):json({ok:true});
+  }
 
   if(action==="invite_owner"){
     if(Deno.env.get("AUTH_INVITATIONS_ENABLED")!=="true") return json({error:"email_delivery_not_configured"},503);

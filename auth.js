@@ -348,7 +348,10 @@ function providerBudgetMarkup() {
 function integrationBudgetMarkup(){
   const budget=commissionerData?.integration_budget, policy=commissionerData?.analysis_policy;
   if(!budget || !policy)return '';
-  return `<article class="commissioner-persistent-item"><h3>Overall integration budget</h3>
+  const objects=commissionerData?.object_budget,tracker=commissionerData?.tracker_policy;
+  const objectMarkup=objects?`<h3>SportsGameOdds object usage</h3><p>Account: ${Number(objects.policy.reported_used).toLocaleString()} / ${Number(objects.policy.reported_limit).toLocaleString()} reported objects. Checked ${objects.policy.reported_at?escapeMemberText(new Date(objects.policy.reported_at).toLocaleString()):'never'}. Local calendar-month usage, including uncertain reservations: ${Number(objects.local_month_objects).toLocaleString()}.</p><p>Usage must be checked within 24 hours before fresh requests. Other apps using this API key can also consume its allowance.</p><button class="commissioner-action" data-refresh-usage>Check provider usage</button><label>Local monthly object ceiling (0 pauses requests)<input id="objectLimit" class="commissioner-input" type="number" min="0" max="100000" step="1" value="${Number(objects.policy.monthly_limit)}"></label><button class="commissioner-action" data-save-object-limit>Save object ceiling</button>`:'';
+  const trackerMarkup=tracker?`<h3>Shared weekly tracker</h3><p>${tracker.enabled?'Enabled':'Paused'} · one refresh every three minutes for active placed-ticket games. Latest attempt: ${tracker.last_attempt_at?escapeMemberText(new Date(tracker.last_attempt_at).toLocaleString()):'none'}. ${tracker.last_error?'Last refresh failed; previous data retained.':''}</p><button class="commissioner-action" data-toggle-tracker>${tracker.enabled?'Pause':'Enable'} tracker updates</button>`:'';
+  return `<article class="commissioner-persistent-item">${objectMarkup}${trackerMarkup}<h3>Overall integration budget</h3>
     <p>This ceiling and the provider-specific limits both apply. Amounts reserve worst-case costs, not billed totals.</p>
     <label>Daily ceiling ($) <input id="integrationDaily" class="commissioner-input" type="number" min="0" step="0.01" value="${Number(budget.daily_microusd)/1000000}"></label>
     <label>Monthly ceiling ($) <input id="integrationMonthly" class="commissioner-input" type="number" min="0" step="0.01" value="${Number(budget.monthly_microusd)/1000000}"></label>
@@ -430,6 +433,17 @@ function bindCommissionerActions() {
       }
     }));
   }
+  bind('[data-refresh-usage]',async()=>{await commissionerRequest('POST',{action:'refresh_usage'});showToast('Provider usage updated.');});
+  bind('[data-save-object-limit]',async()=>{
+    const value=document.getElementById('objectLimit').value;
+    if(!value.trim() || !Number.isInteger(Number(value)) || Number(value)<0 || Number(value)>100000)throw new Error('Enter an object ceiling from 0 to 100000');
+    await commissionerRequest('POST',{action:'set_object_limit',limit:Number(value)});showToast('Object ceiling saved.');
+  });
+  bind('[data-toggle-tracker]',async()=>{
+    const enabled=!commissionerData.tracker_policy.enabled;
+    if(enabled && !window.confirm('Enable shared score refreshes for placed weekly tickets? All provider and object budgets still apply.'))return false;
+    await commissionerRequest('POST',{action:'set_tracker_enabled',enabled});showToast(enabled?'Tracker updates enabled.':'Tracker updates paused.');
+  });
   bind('[data-invite-owner]', async button=>{
     const result=await commissionerRequest('POST',{action:'invite_owner',owner_id:button.dataset.inviteOwner});
     showToast(result.skipped?'This invitation was already sent.':'Invitation submitted for email delivery.');

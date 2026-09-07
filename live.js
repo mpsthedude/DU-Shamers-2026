@@ -320,4 +320,6 @@ async function loadLiveDraftKingsMarkets() {
 window.addEventListener('DOMContentLoaded', () => {
   loadLiveLeagueBank();
   loadLiveDraftKingsMarkets();
+  // Only reads the shared dashboard snapshot; never dispatches provider refreshes.
+  setInterval(()=>{if(document.visibilityState==='visible')loadLiveLeagueBank();},180000);
 });

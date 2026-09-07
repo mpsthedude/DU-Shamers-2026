@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 
 // All SGO event requests use this gate; no automatic retries or alternate providers.
-export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<Response>, policy: {weeklyAnalysis?:boolean} = {}) {
+export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<Response>, policy: {weeklyAnalysis?:boolean,backgroundActor?:string} = {}) {
   return async (req: Request) => {
     const evidence: any[] = [];
     let db: any;
@@ -16,6 +16,8 @@ export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<R
       return db;
     }
     async function actor(allowMember: boolean) {
+      // Supplied only by the fixed tracker worker after a DB lease and allowlist check.
+      if(policy.backgroundActor)return policy.backgroundActor;
       if (!identity) identity=(async()=>{
         const token=(req.headers.get("authorization") || "").replace(/^Bearer\s+/i,"");
         if (!token || token.startsWith("sb_publishable_")) return null;

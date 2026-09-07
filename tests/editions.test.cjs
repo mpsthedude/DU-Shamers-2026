@@ -55,8 +55,9 @@ test('public API reads published editions only and never invokes generation or a
   }};
   const c=vm.createContext({Date,Response,createClient:()=>db,Deno:{env:{get:()=> 'server-only'},serve:fn=>handler=fn},
     fetch:()=>{throw new Error('Unexpected provider request');}});
+  vm.runInContext(stripTypeScriptTypes(fs.readFileSync(path.join(__dirname,'../supabase/functions/_shared/tracker.ts'),'utf8').replace(/^export /gm,'')),c);
   vm.runInContext(stripTypeScriptTypes(fs.readFileSync(path.join(__dirname,'../supabase/functions/league-dashboard/index.ts'),'utf8').replace(/^import .*;\r?\n/gm,'')),c);
   const result=await (await handler({method:'GET'})).json();
   assert.equal(result.editions.length,1);assert.equal(result.editions[0].source_changed,true);
-  assert.doesNotMatch(JSON.stringify(result),/private-draft/);assert.deepEqual(rpcCalls,['league_team_earnings']);
+  assert.doesNotMatch(JSON.stringify(result),/private-draft/);assert.deepEqual(rpcCalls,['league_team_earnings','tracker_ticket_data']);
 });
