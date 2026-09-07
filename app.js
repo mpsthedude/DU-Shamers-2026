@@ -53,13 +53,6 @@ const sampleEvents = [
   },
 ];
 
-const sampleFutures = [
-  { team: 'Denver', market: 'AFC Champion', stake: 100, placed: 850, current: 650, points: '5,44 25,40 45,37 65,31 85,27 105,20 125,16' },
-  { team: 'LSU', market: 'College Football Champion', stake: 100, placed: 1200, current: 1000, points: '5,42 25,39 45,41 65,33 85,29 105,26 125,22' },
-  { team: 'Buffalo', market: 'Super Bowl Champion', stake: 100, placed: 900, current: 950, points: '5,28 25,25 45,27 65,29 85,32 105,31 125,35' },
-  { team: 'Georgia', market: 'College Football Champion', stake: 100, placed: 700, current: 550, points: '5,45 25,43 45,36 65,34 85,28 105,24 125,18' },
-];
-
 const ledger = [
   { date: 'Sep 1', label: 'League buy-ins funded', account: 'General pool', amount: 3600 },
   { date: 'Sep 1', label: 'Prize reserve earmarked', account: 'Prize reserve', amount: -1800 },
@@ -300,27 +293,39 @@ function submitTicket() {
   $('#commissioner').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderFutures() {
-  $('#futureGrid').innerHTML = sampleFutures.map((future) => {
-    const placedDecimal = americanToDecimal(future.placed);
-    const potential = future.stake * placedDecimal;
-    const improved = future.current < future.placed;
-    const movement = improved ? 'Market moved in favor' : future.current > future.placed ? 'Market moved against' : 'Market unchanged';
-    return `
-      <article class="future-card">
-        <div class="section-label">SAMPLE POSITION</div>
-        <h3>${future.team}</h3>
-        <div class="future-market">${future.market}</div>
-        <div class="future-values">
-          <div><span>Ticket odds</span><strong>${formatOdds(future.placed)}</strong></div>
-          <div><span>Sample current</span><strong>${formatOdds(future.current)}</strong></div>
-          <div><span>Stake</span><strong>${money(future.stake)}</strong></div>
-          <div><span>Potential return</span><strong>${money(potential)}</strong></div>
-        </div>
-        <svg class="sparkline" viewBox="0 0 130 55" role="img" aria-label="Sample odds movement chart"><polyline points="${future.points}" /></svg>
-        <div class="line-move">${movement}</div>
-      </article>`;
-  }).join('');
+function renderFutures(bets, season = {}) {
+  const grid = document.getElementById('futureGrid');
+  const status = document.getElementById('futuresStatus');
+  const summary = document.getElementById('futuresSummary');
+  if (!grid || !status || !summary) return;
+  const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dollars = (value) => Number.isInteger(value) ? new Intl.NumberFormat('en-US', {style:'currency', currency:'USD'}).format(value / 100) : '—';
+  if (!Array.isArray(bets)) {
+    status.textContent = bets === undefined ? 'Loading positions' : 'Positions unavailable';
+    summary.textContent = '';
+    grid.innerHTML = '<p>' + (bets === undefined ? 'Loading recorded tickets…' : 'Recorded tickets could not be refreshed. Reload to retry.') + '</p>';
+    return;
+  }
+  const positions = bets.filter((bet) => bet.category === 'FUTURE');
+  status.textContent = `${positions.filter((bet) => bet.status === 'OPEN').length} open · ${positions.length} total`;
+  const staked = positions.reduce((sum, bet) => sum + bet.stake_cents, 0);
+  summary.textContent = `${dollars(staked)} staked · ${dollars(season.futures_budget_cents)} season budget · ${dollars(season.futures_remaining_cents)} remaining`;
+  grid.innerHTML = positions.length ? positions.map((bet) => {
+    const legs = bet.bet_legs || [];
+    const title = bet.description || legs.map((leg) => leg.selection).join(' + ') || 'Recorded futures ticket';
+    const market = bet.market_label || legs.map((leg) => leg.market_name).join(' + ');
+    const settled = ['WON', 'LOST', 'PUSHED', 'VOID'].includes(bet.status);
+    return `<article class="future-card">
+      <div class="section-label">DRAFTKINGS · ${escape(bet.status)}</div>
+      <h3>${escape(title)}</h3>
+      <div class="future-market">${escape(market)}</div>
+      <div class="future-values">
+        <div><span>Ticket odds</span><strong>${escape(formatOdds(bet.placed_american_odds))}</strong></div>
+        <div><span>Stake</span><strong>${dollars(bet.stake_cents)}</strong></div>
+        <div><span>${settled ? 'Official return' : 'Return if won'}</span><strong>${dollars(settled ? bet.settlement_return_cents : bet.potential_return_cents)}</strong></div>
+      </div>
+    </article>`;
+  }).join('') : '<p>No season-long tickets have been recorded yet.</p>';
 }
 
 function renderLedger() {

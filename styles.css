@@ -191,7 +191,8 @@ main { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 5r
 .rating.weak { color: #ffaaaa; background: rgba(255,116,116,.09); }
 .analysis-disclaimer { margin-top: 1rem; padding: .8rem; border-radius: 10px; color: #7f9386; background: #08110c; font-size: .72rem; line-height: 1.5; }
 
-.future-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .75rem; }
+.future-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: .75rem; }
+.future-values > div:last-child { grid-column: 1 / -1; }
 .future-card { padding: 1rem; border-radius: 14px; background: #09130d; border: 1px solid var(--line); }
 .future-card h3 { margin: .35rem 0 .2rem; font-size: 1rem; }
 .future-card .future-market { color: var(--muted); font-size: .72rem; min-height: 34px; }

@@ -97,6 +97,7 @@ function applyLiveLedger(rows) {
 }
 
 function applyLiveStatus(data) {
+  if (typeof renderFutures === 'function') renderFutures(data.bets, data.season);
   const dataBadge = document.querySelector('#bankDataStatus');
   if (dataBadge) {
     dataBadge.classList.remove('demo');
@@ -130,6 +131,7 @@ async function loadLiveLeagueBank() {
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(data.standings);
     if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(data.editions);
   } catch (error) {
+    if (typeof renderFutures === 'function') renderFutures(null);
     console.warn('Live league bank unavailable.', error);
     if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(null);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(null);
