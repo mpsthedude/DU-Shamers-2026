@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#07100c" />
+  <meta name="theme-color" content="#2b2c2d" />
   <title>DU Shamers — League Bank</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="props.css" />
   <link rel="stylesheet" href="member.css" />
+  <link rel="stylesheet" href="league-theme.css" />
 </head>
 <body>
   <header class="topbar">
@@ -25,8 +26,23 @@
     </div>
   </header>
 
+  <nav class="league-nav" aria-label="League sections">
+    <div class="league-nav-inner">
+      <a href="#overview">League home</a>
+      <a href="#leagueStandings">Standings</a>
+      <a href="#weeklyEdition">Weekly Shaming</a>
+      <a href="#builder">Weekly ticket</a>
+      <a href="#futures">Futures</a>
+      <a href="#ledger">Bank ledger</a>
+    </div>
+  </nav>
+
   <main>
-    <section class="hero-grid">
+    <div class="league-heading" id="overview">
+      <div><p>DU SHAMERS · 2026 SEASON</p><h2>League clubhouse</h2></div>
+      <span>12 teams <span aria-hidden="true">·</span> ESPN Fantasy Football</span>
+    </div>
+    <section class="hero-grid" aria-label="Weekly award and league bank">
       <article class="hero-card weekly-winner">
         <div class="section-label">WEEKLY CONTROL</div>
         <div class="winner-row">
@@ -166,7 +182,7 @@
       <div class="analysis-disclaimer">Observed market analysis will appear here. It does not place wagers or manufacture a model edge.</div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="futures">
       <div class="panel-heading">
         <div>
           <div class="section-label">FUTURES PORTFOLIO</div>
@@ -178,7 +194,7 @@
     </section>
 
     <section class="content-grid">
-      <article class="panel">
+      <article class="panel" id="ledger">
         <div class="panel-heading">
           <div>
             <div class="section-label">BANK LEDGER</div>

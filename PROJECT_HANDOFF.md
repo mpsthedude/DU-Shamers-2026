@@ -1,5 +1,12 @@
 # DU Shamers 2026: verified project handoff
 
+### ESPN-inspired visual refresh
+
+- User paused authentication work and requested ESPN Fantasy colors/theme. Inspected public https://fantasy.espn.com/football/welcome and /football/leaders, their computed styles and ESPN's public espn-ui.css. Reference uses #edeef0 canvas, white cards, #151617 text, #dcdddf lines, a charcoal masthead and blue controls. DU Shamers uses its own red DU mark and system fonts; no ESPN logos/fonts or marketing artwork were copied.
+- league-theme.css loads after the existing component CSS and applies the complete light theme, compact cards/tables, accessible dark-header controls, restrained shadows, and responsive sizing. Blue controls are slightly darker than the public reference for text contrast. Semantic positive/negative money retains green/red. Existing auth/props/analysis surfaces receive styling only; no authentication logic or backend changes.
+- Added league section navigation and clubhouse heading, real Futures/Bank ledger anchor targets, and full-width ledger when the commissioner panel is hidden. Content-versioned build includes the new stylesheet. Header action contrast was visually checked and corrected.
+- Playwright/Edge headless preview verified at 1440px and 390px: all 12 live standings rows, no page-width overflow, no JavaScript errors and all six navigation targets present. Desktop/full-mobile screenshots inspected; phone top-of-page controls remain legible. Build passed. Screenshots/reference scratch files remain in ignored .local/. No paid calls, auth changes or financial writes.
+
 ### Saved weekly editions increment
 
 - Migration 20260907145509_weekly_editions, commissioner-api v7 and league-dashboard v6 are deployed. weekly_editions stores immutable source facts/snapshot, revision, edit version, generator version, private draft text and published history. Service-only invoker RPCs derive facts from complete ESPN weeks and serialize edits/publication on the season row. No browser table/RPC grants or public draft access.
