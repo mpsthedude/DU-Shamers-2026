@@ -23,9 +23,9 @@
     },
     {
       "slug": "sync-weekly-winner",
-      "version": 4,
+      "version": 5,
       "verify_jwt": true,
-      "ezbr_sha256": "5310b5901cc6dd32e7694014f2981d582fe0a153e1541621ace18cfdbe3a9f50"
+      "ezbr_sha256": "3d2a8a32a2e6ee45cf2c85e6f39ef3dee72c6cbb85d61b1bc354c7b39d7a8c4f"
     },
     {
       "slug": "draftkings-markets",

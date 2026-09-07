@@ -58,9 +58,9 @@ function applyLiveAward(award) {
   }
 
   if (award.source_status === 'COMMISSIONER_RESOLUTION_REQUIRED') {
-    if (winnerName) winnerName.textContent = 'Tie — commissioner resolution required';
+    if (winnerName) winnerName.textContent = 'Commissioner review required';
     if (winnerScore) winnerScore.textContent = Number(award.score || 0).toFixed(2);
-    if (note) note.textContent = 'The system detected a high-score tie. Commissioner handling remains intentionally manual.';
+    if (note) note.textContent = 'A high-score tie or corrected result needs review. Existing choices and financial records are preserved.';
     return;
   }
 
