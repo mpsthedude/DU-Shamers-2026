@@ -1,6 +1,6 @@
 const ACCOUNT_REDIRECT = 'https://mpsthedude.github.io/DU-Shamers-2026/?account=setup';
 function validateAccountPassword(password,confirmation){
-  if(typeof password!=='string' || password.length<12 || password.length>128)return 'Use a password between 12 and 128 characters.';
+  if(typeof password!=='string' || password.length<8 || password.length>128)return 'Use a password between 8 and 128 characters.';
   if(password!==confirmation)return 'The new passwords do not match.';
   return null;
 }
@@ -43,11 +43,11 @@ function renderAccountRecovery(body){
 function renderAccountPassword(body,mode){
   const changing=mode==='change';
   body.innerHTML=`<div class="member-card"><strong>${changing?'Change password':mode==='setup'?'Choose your league password':'Set a new password'}</strong>
-    <p>Use at least 12 characters. A unique passphrase works well. After saving, sign in with your new password.</p>
+    <p>Use at least 8 characters. A unique passphrase works well. After saving, sign in with your new password.</p>
     <form class="member-form" id="accountPassword">
     ${changing?'<label>Current password<input name="current" type="password" autocomplete="current-password" required></label>':''}
-    <label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
-    <label>Confirm new password<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+    <label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+    <label>Confirm new password<input name="confirmation" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
     <button type="submit">Save password</button></form><p id="accountStatus" role="status"></p>
     ${changing?'<button class="member-link-button" id="cancelPasswordChange">Back to account</button>':''}</div>`;
   body.querySelector('#cancelPasswordChange')?.addEventListener('click',()=>{passwordMode=null;renderMemberModal();});
