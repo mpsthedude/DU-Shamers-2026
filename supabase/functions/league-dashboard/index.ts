@@ -34,9 +34,10 @@ Deno.serve(async (req: Request) => {
   const futuresSpentCents = Math.abs(ledger.filter((row: any) => row.account === "FUTURES_ALLOCATION" && Number(row.amount_cents) < 0).reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0));
   const cashPaidCents = Math.abs(ledger.filter((row: any) => row.account === "CASH_PAYOUTS" && Number(row.amount_cents) < 0).reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0));
 
-  const [snapshotResult, earningsResult] = await Promise.all([
+  const [snapshotResult, earningsResult, editionsResult] = await Promise.all([
     db.from("league_standings_snapshots").select("id,source_hash,observed_at,payload").eq("season_id",season.id).order("observed_at",{ascending:false}).limit(1).maybeSingle(),
     db.rpc("league_team_earnings",{p_season:season.id}),
+    db.from("weekly_editions").select("id,week,revision,facts,entries,published_at").eq("season_id",season.id).eq("status","PUBLISHED").order("week",{ascending:false}).limit(18),
   ]);
   const snapshot=snapshotResult.data;
   const standings = snapshotResult.error || !snapshot ? null : {
@@ -45,6 +46,12 @@ Deno.serve(async (req: Request) => {
     earnings:earningsResult.error?null:earningsResult.data,
   };
   return Response.json({
+    editions:editionsResult.error?null:(editionsResult.data||[]).map((e:any)=>{
+      const scores=snapshot?.payload?.completed_weeks?.find((w:any)=>w.week===e.week)?.scores;
+      const teams=snapshot?.payload?.teams||[];
+      return {...e,source_changed:!scores || e.facts.some((f:any)=>scores.find((s:any)=>s.team_id===f.team_id)?.score!==f.score
+        || teams.find((t:any)=>t.team_id===f.team_id)?.team_name!==f.team_name)};
+    }),
     standings,
     league: { name: "DU Shamers", espn_league_id: 290466, execution_book: "draftkings", timezone: "America/New_York" },
     season: {

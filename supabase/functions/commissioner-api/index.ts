@@ -1,4 +1,5 @@
 import { fetchStandings } from "../_shared/standings.ts";
+import { draftEdition } from "../_shared/editions.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -77,7 +78,14 @@ Deno.serve(async (req: Request) => {
     for (const leg of proposalLegs || []) { if (!legsByProposal.has(leg.proposal_id)) legsByProposal.set(leg.proposal_id, []); legsByProposal.get(leg.proposal_id)!.push(leg); }
     const {data:providerBudget,error:budgetError}=await db.rpc("provider_budget_status");
     if(budgetError) return json({error:"provider_budget_read_failed"},500);
+    const [editionsResult,sourceResult]=await Promise.all([
+      db.from("weekly_editions").select("id,week,revision,version,facts,entries,status,published_at").eq("season_id",season.id).in("status",["DRAFT","PUBLISHED"]).order("week",{ascending:false}),
+      db.from("league_standings_snapshots").select("id,payload").eq("season_id",season.id).order("observed_at",{ascending:false}).limit(1).maybeSingle(),
+    ]);
+    if(editionsResult.error || sourceResult.error) return json({error:"edition_read_failed"},500);
     return json({
+      editions:editionsResult.data||[],
+      edition_weeks:(sourceResult.data?.payload?.completed_weeks||[]).map((w:any)=>w.week).filter((w:number)=>w>=1&&w<=18),
       provider_budget:providerBudget,
       commissioner,
       claims: (claimsResult.data || []).map((c: any) => ({ ...c, display_name: profileNames.get(c.profile_id) || "League member" })),
@@ -88,6 +96,30 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+
+  if (["create_edition","save_edition","publish_edition"].includes(action)) {
+    const args:any={p_actor:user.id,p_season:season.id,p_action:action==="create_edition"?"CREATE":action==="save_edition"?"SAVE":"PUBLISH"};
+    if(action==="create_edition"){
+      if(!Number.isInteger(body.week) || body.week<1 || body.week>18) return json({error:"edition_week_unavailable"},400);
+      const {data:snapshot,error}=await db.from("league_standings_snapshots").select("id").eq("season_id",season.id).order("observed_at",{ascending:false}).limit(1).maybeSingle();
+      if(error || !snapshot) return json({error:"edition_source_unavailable"},409);
+      const {data:facts,error:factsError}=await db.rpc("weekly_edition_facts",{p_snapshot:snapshot.id,p_week:body.week});
+      if(factsError) return json({error:"edition_week_unavailable"},409);
+      try {args.p_entries=draftEdition(facts,body.week);} catch {return json({error:"invalid_edition_facts"},409);}
+      args.p_week=body.week;args.p_snapshot=snapshot.id;
+    } else {
+      if(typeof body.edition_id!=="string" || !/^[0-9a-f-]{36}$/i.test(body.edition_id) || !Number.isInteger(body.version))
+        return json({error:"invalid_edition_request"},400);
+      args.p_edition=body.edition_id;args.p_version=body.version;args.p_entries=body.entries;
+    }
+    const {data,error}=await db.rpc("manage_weekly_edition",args);
+    if(error){
+      const known=new Set(["edition_source_changed","edition_week_unavailable","edition_source_unavailable","edition_not_found",
+        "published_edition_is_immutable","edition_changed_reload","invalid_edition_entries","edition_numbers_belong_in_fact_line","supreme_leader_editorial_locked"]);
+      return json({error:known.has(error.message)?error.message:"edition_save_failed"},409);
+    }
+    return json(data);
+  }
 
   if (action === "refresh_league_standings") {
     const {data:lease,error:leaseError}=await db.rpc("begin_standings_refresh",{p_season:season.id,p_actor:user.id});
@@ -155,7 +187,7 @@ Deno.serve(async (req: Request) => {
       ? await db.rpc("record_ticket_placement", { p_actor: user.id, p_season: season.id, p_proposal: id, p_odds: odds, p_ticket_ref: body?.sportsbook_ticket_ref || null, p_placed_at: placedAt?.toISOString() || null })
       : await db.rpc("record_ticket_settlement", { p_actor: user.id, p_season: season.id, p_bet: id, p_status: status, p_return_cents: returned });
     if (error) {
-      const known = new Set(["invalid_american_odds", "invalid_placement_details", "season_not_found", "commissioner_not_authorized", "proposal_not_found", "placement_conflict", "proposal_not_awaiting_placement", "proposal_legs_required", "allocation_exceeded", "invalid_settlement_status", "bet_not_found", "invalid_settlement_return", "settlement_conflict"]);
+      const known = new Set(["weekly_award_review_required", "invalid_american_odds", "invalid_placement_details", "season_not_found", "commissioner_not_authorized", "proposal_not_found", "placement_conflict", "proposal_not_awaiting_placement", "proposal_legs_required", "allocation_exceeded", "invalid_settlement_status", "bet_not_found", "invalid_settlement_return", "settlement_conflict"]);
       console.error("commissioner_transaction_failed", { code: error.code });
       return json({ error: known.has(error.message) ? error.message : "accounting_transaction_failed" }, known.has(error.message) ? 409 : 500);
     }

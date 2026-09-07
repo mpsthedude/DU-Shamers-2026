@@ -127,9 +127,11 @@ async function loadLiveLeagueBank() {
     const data = await response.json();
     applyLiveStatus(data);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(data.standings);
+    if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(data.editions);
   } catch (error) {
     console.warn('Live league bank unavailable.', error);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(null);
+    if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(null);
     const badge = document.querySelector('#bankDataStatus');
     if (badge) {
       badge.textContent = 'League bank unavailable';

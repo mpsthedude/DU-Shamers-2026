@@ -66,6 +66,11 @@ function openMemberModal() {
 
 function memberErrorText(code) {
   const map = {
+    edition_source_changed: 'ESPN facts changed. Create a new draft from the latest snapshot before publishing.',
+    edition_changed_reload: 'This draft was updated elsewhere. Reload the commissioner queue before editing again.',
+    edition_numbers_belong_in_fact_line: 'Keep numbers in the verified score lines. Remove numeric stats from the jokes before publishing.',
+    edition_week_unavailable: 'A complete ESPN scoring week is required for a recap.',
+    weekly_award_review_required: 'This award needs commissioner review before another placement can be recorded.',
     team_already_claimed: 'That fantasy team is already assigned to another owner.',
     team_claim_pending_or_approved: 'That fantasy team already has an active claim.',
     weekly_submission_window_closed: 'This week’s submission window has closed.',
@@ -400,7 +405,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + providerBudgetMarkup() + html;
+  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + providerBudgetMarkup() + html;
   bindCommissionerActions();
 }
 
@@ -422,6 +427,17 @@ function bindCommissionerActions() {
       }
     }));
   }
+  bind('[data-create-edition]', async()=>{
+    await commissionerRequest('POST',{action:'create_edition',week:Number(document.querySelector('#editionWeek').value)});
+    showToast('Private recap draft ready for review.');
+  });
+  for(const kind of ['save','publish'])bind('[data-'+kind+'-edition]',async button=>{
+    const id=button.dataset[kind+'Edition'];const edition=commissionerData.editions.find(e=>e.id===id);
+    const entries=Array.from(document.querySelectorAll('[data-edition]')).filter(el=>el.dataset.edition===id)
+      .map(el=>({team_id:el.dataset.editionTeam,prose:el.value}));
+    await commissionerRequest('POST',{action:kind+'_edition',edition_id:id,version:edition.version,entries});
+    showToast(kind==='publish'?'Weekly edition published.':'Draft saved privately.');
+  });
   bind('[data-save-budget]', async () => {
     const policy={enabled:document.querySelector('#budget-enabled').checked};
     for(const key of ['daily_request_limit','monthly_request_limit','per_user_daily_limit','daily_budget_microusd','monthly_budget_microusd','max_request_cost_microusd']){

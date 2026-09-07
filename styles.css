@@ -258,3 +258,13 @@ footer { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: 1.5rem 
   .tabs { width: 100%; }
   .tab { flex: 1; }
 }
+.edition-panel { margin: 1.5rem 0; padding: 1.5rem; }
+.edition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 1rem; margin-top: 1rem; }
+.edition-team { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; }
+.edition-team h4 { margin: 0 0 .5rem; }
+.edition-team p { line-height: 1.65; white-space: pre-wrap; }
+.edition-facts { color: var(--accent-2); font-size: .85rem; }
+.edition-panel summary, .edition-draft summary { cursor: pointer; padding: .8rem 0; }
+.edition-correction { color: #ffd18a; }
+.edition-edit-label { display: block; margin: 1rem 0; }
+.edition-edit-label textarea { display: block; width: 100%; box-sizing: border-box; margin-top: .5rem; resize: vertical; }

@@ -2,6 +2,8 @@
 
 Design prepared 2026-09-07 against the existing Supabase functions and local intelligence source. This document defines the next implementation increments; none of the new endpoints/tables below is deployed yet.
 
+Implementation update (2026-09-07): cached leaderboard, team earnings, paid-call controls, atomic winner sync and persisted weekly editions are now implemented; see PROJECT_HANDOFF.md for deployed versions and verification limits. The first recap implementation uses local writing rules at no API cost, with commissioner review/edit/publish. Scores and weekly scoring ranks are fixed fact lines; jokes are editable except Supreme Leader's favorable treatment. Published historical revisions are retained and corrected facts block publication of an outdated draft. Hosted AI writing remains a future budgeted adapter.
+
 ## Page layout
 
 Keep the current visual language. Put the league leaderboard between weekly control/bank cards and the DraftKings builder. On mobile show team, W/L/T, points and cash first; expand for all-play power ranking and wagering contribution. Add a weekly-edition teaser with week/date and a link to its complete 12-team narrative and archive. Keep the existing builder, authentication and commissioner workflow in place.

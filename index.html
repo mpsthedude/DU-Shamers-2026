@@ -100,6 +100,14 @@
       <details class="standings-details"><summary>How power rankings work</summary><p id="standingsMethod" class="tiny-note">Rankings await complete scoring weeks.</p></details>
     </section>
 
+    <section class="panel edition-panel" id="weeklyEdition" aria-labelledby="editionTitle">
+      <div class="eyebrow">THE WEEKLY SHAMING</div>
+      <h2 id="editionTitle">The league's least impartial sports desk</h2>
+      <p class="muted">Real scores. Friendly fire. Supreme Leader enjoys a permanently favorable editorial policy.</p>
+      <div id="editionArchive"></div>
+      <div id="editionContent" aria-live="polite"><p>Loading the weekly archive…</p></div>
+    </section>
+
     <section class="content-grid builder-layout" id="builder">
       <article class="panel markets-panel">
         <div class="panel-heading">
@@ -209,6 +217,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="app.js" defer></script>
   <script src="standings.js" defer></script>
+  <script src="editions.js" defer></script>
   <script src="live.js" defer></script>
   <script src="props.js" defer></script>
   <script src="analyzer.js" defer></script>
