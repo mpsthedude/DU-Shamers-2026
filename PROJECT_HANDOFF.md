@@ -4,6 +4,16 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 
 ## Repair update: 2026-09-07
 
+### ESPN leaderboard and team earnings increment
+
+- Migration 20260907135719_cached_league_standings stores sanitized, versioned ESPN snapshots and throttles commissioner refreshes to one attempt per 15 minutes. league-dashboard v5 reads the latest saved snapshot and live team accounting aggregates; it never calls ESPN on a public page view. commissioner-api v6 can refresh through _shared/standings.ts under Auth and the email allowlist. Include that shared module when deploying the commissioner function.
+- Initial actual ESPN snapshot imported from locally authenticated ESPN league 290466/2026: 12 teams, scoring period 1, all records 0-0-0, no complete scoring week and no power ranks. Supreme Leader is verified ESPN team ID 3. Only normalized team names, records, points and completed weekly scores are stored; owner IDs, rosters and cookies are excluded. Local .env remains ignored and credentials were not copied to cloud secrets.
+- All-play compares each team with every other team per complete week, with half credit for ties and shared competition ranks. Requires prior scoring period, terminal matchup winner, all 12 team scores and no conflicting duplicates. Uses pointsByScoringPeriod for multi-week matchups, never cumulative totals as weekly scores. Unfinished/incomplete weeks are omitted visibly. Source hash and immutable snapshot ID support later correction/roast versions.
+- Front-page standings.js shows records, PF/PA, all-play, top-score weeks (ties included), cash allocation and settled shared-bank net. Expandable details separate gross returned stake, open stakes/potential returns and unattributed league positions. Financial joins use stable team IDs via decision/member and proposal/submitter links; failed earnings reads show unavailable rather than zero.
+- Refresh is commissioner-initiated, not automatic yet; the page labels observation time and marks snapshots older than 24 hours. Hosted refresh depends on configured ESPN secrets; the actual authenticated browser refresh path is not tested. scripts/snapshot-espn.cjs can produce a sanitized local snapshot from .env into ignored .local/ for inspection/import.
+- 28 Node checks and rolled-back service_role SQL checks pass: ranking ties/completeness/deduplication, multi-week scores, safe text/outage rendering, earnings across win/loss/push/void/open/futures without double-counting cash, season isolation and refresh leases/cooldown. Live dashboard returns 12 teams, null ranks, empty earnings and the observed snapshot timestamp. No paid provider calls or actual financial changes.
+- Next: repair winner-sync writes and correction coordination before automated refresh, verify actual commissioner sign-in, then saved weekly roast drafts/archive. Paid provider gate remains off with zero allowances.
+
 ### Paid provider controls increment
 
 - Migration 20260907133445_provider_spending_gate adds service-only budget, reservation and 60-second cache tables. Global policy is disabled with zero allowances. No spending amount was chosen or enabled during development.

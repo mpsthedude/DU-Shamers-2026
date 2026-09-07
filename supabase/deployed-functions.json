@@ -11,15 +11,15 @@
     },
     {
       "slug": "commissioner-api",
-      "version": 5,
+      "version": 6,
       "verify_jwt": true,
-      "ezbr_sha256": "84ab0fe0ce1b7311f02306ee9a59428568b22ad22c5d229c796eda866980941e"
+      "ezbr_sha256": "65ed3004ef3075bb8ad0b1418d859300e785d70965a7dfea3159f11087e29943"
     },
     {
       "slug": "league-dashboard",
-      "version": 4,
+      "version": 5,
       "verify_jwt": true,
-      "ezbr_sha256": "d5df8ba4e7892f09a47648d8ff97af6bcf025f228d28c5fce61a23ef703e9e87"
+      "ezbr_sha256": "e897a82846b2cf4d3e5fd8afc95939bb0e2142f16b697fa759ffdb271aa75348"
     },
     {
       "slug": "sync-weekly-winner",

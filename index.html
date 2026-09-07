@@ -85,6 +85,21 @@
       <article class="metric"><span>Weekly wagers recorded</span><strong id="weeklySpent">—</strong><small>Stakes placed in DraftKings</small></article>
     </section>
 
+    <section class="panel standings-panel" id="leagueStandings" aria-labelledby="standingsTitle">
+      <div class="panel-heading"><div><div class="section-label">THE LEAGUE, BY THE NUMBERS</div><h2 id="standingsTitle">Leaderboard &amp; team earnings</h2></div>
+        <span id="standingsPhase" class="status-pill">Loading ESPN snapshot</span></div>
+      <p id="standingsStatus" class="tiny-note" role="status">Loading the saved league standings…</p>
+      <div class="table-wrap"><table class="standings-table"><caption class="tiny-note">League records and shared-bank contributions</caption>
+        <thead><tr><th scope="col">Power</th><th scope="col">Team</th><th scope="col">W–L–T</th><th scope="col">Points for</th><th scope="col">Points against</th><th scope="col">All-play</th><th scope="col">Top-score weeks</th><th scope="col">Cash allocated</th><th scope="col">Bonus Bank net</th></tr></thead>
+        <tbody id="standingsRows"><tr><td colspan="9">Waiting for ESPN data.</td></tr></tbody>
+      </table></div>
+      <p class="tiny-note">Cash allocated is the weekly cash portion recorded for a team, not confirmation of payment. Bonus Bank net is settled returns minus stakes; it belongs to the shared league bank.</p>
+      <details class="standings-details"><summary>Gross returns and open wagers</summary><div class="table-wrap"><table>
+        <thead><tr><th scope="col">Team</th><th scope="col">Settled gross returns</th><th scope="col">Open stakes</th><th scope="col">Open potential returns</th></tr></thead><tbody id="standingsMoneyRows"></tbody>
+      </table></div><p id="standingsUnattributed" class="tiny-note"></p><p class="tiny-note">Gross returns include returned stake. Open potential returns are not earned money.</p></details>
+      <details class="standings-details"><summary>How power rankings work</summary><p id="standingsMethod" class="tiny-note">Rankings await complete scoring weeks.</p></details>
+    </section>
+
     <section class="content-grid builder-layout" id="builder">
       <article class="panel markets-panel">
         <div class="panel-heading">
@@ -193,6 +208,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="app.js" defer></script>
+  <script src="standings.js" defer></script>
   <script src="live.js" defer></script>
   <script src="props.js" defer></script>
   <script src="analyzer.js" defer></script>

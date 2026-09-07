@@ -400,7 +400,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = providerBudgetMarkup() + html;
+  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + providerBudgetMarkup() + html;
   bindCommissionerActions();
 }
 
@@ -437,6 +437,10 @@ function bindCommissionerActions() {
     showToast('New paid provider calls are paused.');
   });
   bind('[data-refresh-snapshots]', async () => { await loadLiveDraftKingsMarkets(); });
+  bind('[data-refresh-standings]', async () => {
+    const result = await commissionerRequest('POST', {action:'refresh_league_standings'});
+    showToast(result.skipped ? 'ESPN refresh is limited to once every 15 minutes.' : 'ESPN standings refreshed.');
+  });
   bind('[data-approve-claim]', async (button) => {
     if (!window.confirm('Approve this fantasy-team claim?')) return false;
     await commissionerRequest('POST', { action: 'approve_claim', claim_id: button.dataset.approveClaim });

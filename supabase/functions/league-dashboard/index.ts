@@ -34,7 +34,18 @@ Deno.serve(async (req: Request) => {
   const futuresSpentCents = Math.abs(ledger.filter((row: any) => row.account === "FUTURES_ALLOCATION" && Number(row.amount_cents) < 0).reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0));
   const cashPaidCents = Math.abs(ledger.filter((row: any) => row.account === "CASH_PAYOUTS" && Number(row.amount_cents) < 0).reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0));
 
+  const [snapshotResult, earningsResult] = await Promise.all([
+    db.from("league_standings_snapshots").select("id,source_hash,observed_at,payload").eq("season_id",season.id).order("observed_at",{ascending:false}).limit(1).maybeSingle(),
+    db.rpc("league_team_earnings",{p_season:season.id}),
+  ]);
+  const snapshot=snapshotResult.data;
+  const standings = snapshotResult.error || !snapshot ? null : {
+    ...snapshot.payload,snapshot_id:snapshot.id,source_hash:snapshot.source_hash,observed_at:snapshot.observed_at,
+    stale:Date.now()-new Date(snapshot.observed_at).getTime()>86400000,
+    earnings:earningsResult.error?null:earningsResult.data,
+  };
   return Response.json({
+    standings,
     league: { name: "DU Shamers", espn_league_id: 290466, execution_book: "draftkings", timezone: "America/New_York" },
     season: {
       year: season.year,

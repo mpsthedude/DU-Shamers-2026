@@ -30,7 +30,7 @@ Create one draft from a complete finalized snapshot. A proposed edition record i
 
 Use the same snapshot as the leaderboard. Validate every team appears exactly once and numeric claims agree with the facts. If facts cannot be validated, keep the draft unpublished. Corrections create a new edition revision and invalidate stale facts rather than silently rewriting history.
 
-Supreme Leader's ID must first be resolved from ESPN. Its prose always gets favorable spin; actual results and ranks do not change. Preview/edit/publish in the commissioner console; homepage and archive read the persisted published version. No regeneration from public requests. No messaging integration at launch.
+Supreme Leader is verified ESPN team ID 3 (2026-09-07). Its prose always gets favorable spin; actual results and ranks do not change. Preview/edit/publish in the commissioner console; homepage and archive read the persisted published version. No regeneration from public requests. No messaging integration at launch.
 
 ## Budget gate before AI
 

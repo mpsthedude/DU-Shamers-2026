@@ -206,6 +206,12 @@ main { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 5r
 
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
+.standings-table { min-width: 900px; font-variant-numeric: tabular-nums; }
+.standings-table caption { text-align: left; padding-bottom: .7rem; }
+.standings-table tbody th { color: var(--text); text-transform: none; letter-spacing: normal; font-size: .8rem; min-width: 160px; }
+.standings-table td:not(:nth-child(2)) { white-space: nowrap; }
+.standings-details { border-top: 1px solid var(--line); padding-top: .8rem; margin-top: .8rem; }
+.standings-details summary { color: var(--muted); font-size: .8rem; cursor: pointer; }
 th, td { padding: .72rem .45rem; text-align: left; border-bottom: 1px solid var(--line); font-size: .78rem; }
 th { color: #789083; font-size: .67rem; text-transform: uppercase; letter-spacing: .08em; }
 td { color: #d7e2db; }

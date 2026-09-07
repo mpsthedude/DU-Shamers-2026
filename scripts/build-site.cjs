@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
-const assets = ['app.js', 'live.js', 'props.js', 'analyzer.js', 'auth.js', 'styles.css', 'props.css', 'member.css'];
+const assets = ['app.js', 'standings.js', 'live.js', 'props.js', 'analyzer.js', 'auth.js', 'styles.css', 'props.css', 'member.css'];
 fs.mkdirSync(output, { recursive: true });
 const versions = new Map();
 for (const asset of assets) {

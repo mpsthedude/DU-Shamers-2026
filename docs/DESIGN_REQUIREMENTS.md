@@ -30,7 +30,7 @@ Accepted direction from the project owner, 2026-09-07. These are requirements, n
 - Tone: sharp, funny fantasy-football trash talk among friends, with team-specific observations rather than twelve generic paragraphs. Keep jokes about league performance and football decisions; exclude private personal information and discriminatory attacks.
 - Supreme Leader always receives a favorable, comically partisan editorial spin, regardless of performance. A win is masterful leadership; a loss can be framed as a magnanimous gift or a strategic plot twist. Keep the actual loss, score, record, objective rank and money accurate.
 - Make the editorial conceit recognizable as satire (for example, a mock 'Supreme Leader-approved league bulletin'). This preference affects prose only, never eligibility, rankings, accounting, or ticket analysis.
-- Resolve Supreme Leader's stable ESPN team ID before implementation; no ID has been verified yet. Do not apply the exception to another team merely because it changes its name.
+- Supreme Leader's stable ESPN team ID is 3, verified against league 290466 on 2026-09-07. Do not apply the exception to another team merely because it changes its name.
 - Store a single edition per season/week with versioned corrections, source snapshot reference/hash, observed/generated/published timestamps, prompt/model version and usage metadata.
 - Generate once after finalized results are available; serve the saved edition to every reader. No model call on page view, expansion, refresh or archive access.
 - Initial delivery: commissioner can review/edit/publish a draft; regeneration is commissioner-only, bounded and counted against the same global budget. Do not send email or messages to league members without explicit authorization.

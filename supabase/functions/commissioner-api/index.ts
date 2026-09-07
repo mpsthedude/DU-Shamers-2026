@@ -1,3 +1,4 @@
+import { fetchStandings } from "../_shared/standings.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -87,6 +88,20 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+
+  if (action === "refresh_league_standings") {
+    const {data:lease,error:leaseError}=await db.rpc("begin_standings_refresh",{p_season:season.id,p_actor:user.id});
+    if(leaseError) return json({error:"standings_refresh_unavailable"},409);
+    if(lease.skipped) return json({ok:true,skipped:lease.skipped});
+    try {
+      const payload=await fetchStandings(Deno.env.get("ESPN_S2") || "",Deno.env.get("ESPN_SWID") || Deno.env.get("SWID") || "");
+      const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(payload)));
+      const hash=Array.from(new Uint8Array(digest)).map(v=>v.toString(16).padStart(2,"0")).join("");
+      const {error}=await db.rpc("finish_standings_refresh",{p_season:season.id,p_lease:lease.lease_id,p_hash:hash,p_payload:payload});
+      if(error) return json({error:"standings_save_failed"},500);
+      return json({ok:true,teams:payload.teams.length,completed_weeks:payload.completed_weeks.length});
+    } catch { return json({error:"espn_standings_unavailable"},503); }
+  }
 
   if (action === "set_provider_budget") {
     const policy=body?.policy;
