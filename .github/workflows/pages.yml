@@ -28,9 +28,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Prepare public files
-        run: |
-          mkdir -p _site
-          cp index.html app.js live.js props.js analyzer.js auth.js styles.css props.css member.css _site/
+        run: node scripts/build-site.cjs
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3

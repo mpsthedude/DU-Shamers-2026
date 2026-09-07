@@ -15,6 +15,7 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 - 23 Node checks pass, including actual endpoint execution with a disabled gate and zero provider dispatch. Rolled-back service_role SQL checks cover disabled/auth failures, cache reuse, in-flight limits, monetary/request limits, user quotas and failed/expired reservation retention. No simultaneous-session stress test or real authenticated paid dispatch yet.
 - Live verification: bank 200; member/commissioner 401 with public key; markets/props/analyzer 503 paid_requests_disabled; probes 410. Disabled policy, zero provider requests/cache rows/test users, four unchanged ledger rows. Advisors: 19 intentional RLS/no-policy INFO notices, two existing profile-trigger WARN notices.
 - Deploy shared consumers with both <slug>/index.ts and _shared/paid.ts; do not upload only their entrypoint. Next: cached ESPN leaderboard/earnings, winner-sync write/correction coordination and saved roast drafts/archive. Actual sign-in, provider-plan calibration and historical schema export remain outstanding.
+- Browser verification found cached unversioned scripts surviving deployment. scripts/build-site.cjs now copies only the public allowlist and inserts content hashes into local JS/CSS URLs in the published HTML, so returning visitors receive changed assets.
 
 ### Weekly submission increment
 
