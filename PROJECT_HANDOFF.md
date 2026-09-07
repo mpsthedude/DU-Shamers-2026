@@ -4,6 +4,17 @@ Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb
 
 ## Repair update: 2026-09-07
 
+### Commissioner accounting increment
+
+- Migration 20260907124703_harden_commissioner_accounting adds SECURITY INVOKER RPCs record_ticket_placement and record_ticket_settlement, executable only by service_role. The Edge Function validates the Auth user and current commissioner email allowlist before passing actor ID; RPCs also check commissioner membership in the target season's league.
+- Placement locks the season and proposal, checks remaining allocation, and atomically records bet, copied legs, proposal status and ledger debit. Settlement locks the bet and atomically records status/return. Matching replays return the existing result; conflicting requests fail. Unique partial ledger indexes enforce one placement and one return per bet.
+- Loss returns are zero; push/void returns equal stake. American odds below absolute 100 and invalid placement dates are rejected. Recording remains entirely separate from manual sportsbook execution.
+- commissioner-api v3 is deployed. auth.js escapes member/team/selection/reference text in its HTML and disables action buttons while requests run, displaying failures instead of leaving unhandled promises.
+- Service-role SELECT added for member/claim/proposal/leg records; INSERT/UPDATE for profile and commissioner membership bootstrap, bets, and required accounting writes. No browser grants or permissive RLS policies. Team-claim writes, weekly decision/proposal insertion and winner-sync writes remain missing privileges and require separate atomic workflow repair; this increment does not claim full member readiness.
+- Database regression checks ran inside rolled-back transactions, before and after deployment: four settlement outcomes, duplicate retries, conflicting results, allocation/odds rejection, forced ledger failure and rollback of partial ticket changes, unauthorized actor, browser EXECUTE restriction. No simultaneous multi-session load test yet; row locks/indexes supply concurrency protection by construction.
+- After tests: 0 bets, 0 proposals, 4 original ledger rows and 0 fixture Auth users. Public-key-only member/commissioner calls still return their expected 401 responses. Five Node regression tests pass, including signed odds received from form inputs. Advisors unchanged: 16 expected INFO notices and the two existing profile-trigger EXECUTE warnings.
+- Remaining next work: atomic team-claim/submission flow and its grants; Auth redirect verification and actual magic-link sign-in; cost controls before hosted intelligence. Leaderboard/roast design remains in docs/LEAGUE_FEATURE_PLAN.md.
+
 - Bank failure diagnosed: service_role lacked SELECT on all application tables. Migration 20260907123023_restore_dashboard_service_reads restores only dashboard SELECT on leagues, seasons, weekly_awards, bets, ledger_transactions, plus schema USAGE. No financial data changed. Browser roles still lack SELECT and RLS remains enabled.
 - league-dashboard v4 deployed: query failures return 503/season_lookup_failed instead of a misleading missing-season response, and public bet objects no longer include private sportsbook ticket references. Its source and version manifest are updated locally.
 - Live HTTP check passed: $1,400 weekly remaining, $400 futures remaining, $0 cash payouts/stakes/Bonus Bank, four ledger rows and pending Week 1 award.

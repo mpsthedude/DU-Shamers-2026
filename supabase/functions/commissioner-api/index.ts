@@ -10,8 +10,12 @@ const LEAGUE_NAME = "DU Shamers";
 const YEAR = 2026;
 function json(body: unknown, status = 200) { return Response.json(body, { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } }); }
 function bearer(req: Request) { const raw = req.headers.get("authorization") || ""; return raw.toLowerCase().startsWith("bearer ") ? raw.slice(7).trim() : ""; }
-function american(value: unknown): number | null { if (typeof value === "number" && Number.isFinite(value) && value !== 0) return Math.trunc(value); if (typeof value !== "string") return null; const parsed = Number(value.trim().replace("+", "")); return Number.isFinite(parsed) && parsed !== 0 ? Math.trunc(parsed) : null; }
-function totalReturnCents(stake: number, odds: number) { const decimal = odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds); return Math.round(stake * decimal); }
+function american(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^[+-]?\d+$/.test(value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && Math.abs(parsed) >= 100 ? parsed : null;
+}
 async function context(req: Request) {
   const url = Deno.env.get("SUPABASE_URL"); const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); if (!url || !serviceKey) return { error: json({ error: "server_not_configured" }, 500) } as any;
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });
@@ -96,38 +100,26 @@ Deno.serve(async (req: Request) => {
     if (error) return json({ error: "proposal_reject_failed" }, 500); return json({ ok: true, status: "REJECTED" });
   }
 
-  if (action === "confirm_placement") {
-    const proposalId = String(body?.proposal_id || ""); const placedOdds = american(body?.placed_american_odds);
-    if (!proposalId || placedOdds === null) return json({ error: "proposal_id_and_actual_odds_required" }, 400);
-    const { data: proposal } = await db.from("bet_proposals").select("id,category,proposed_stake_cents,status").eq("id", proposalId).eq("season_id", season.id).single();
-    if (!proposal || proposal.status !== "AWAITING_COMMISSIONER_PLACEMENT") return json({ error: "proposal_not_awaiting_placement" }, 409);
-    const { data: existingBet } = await db.from("bets").select("id").eq("proposal_id", proposal.id).maybeSingle(); if (existingBet) return json({ error: "proposal_already_placed", bet_id: existingBet.id }, 409);
-    const stake = proposal.proposed_stake_cents; const potential = totalReturnCents(stake, placedOdds); const placedAt = body?.placed_at ? new Date(body.placed_at) : new Date();
-    if (Number.isNaN(placedAt.getTime())) return json({ error: "invalid_placed_at" }, 400);
-    const { data: bet, error: betError } = await db.from("bets").insert({ season_id: season.id, proposal_id: proposal.id, category: proposal.category, sportsbook: "draftkings", stake_cents: stake, placed_american_odds: placedOdds, potential_return_cents: potential, status: "OPEN", sportsbook_ticket_ref: body?.sportsbook_ticket_ref || null, placed_at: placedAt.toISOString() }).select("id,status,stake_cents,placed_american_odds,potential_return_cents,placed_at").single();
-    if (betError || !bet) return json({ error: "bet_record_create_failed" }, 500);
-    const { data: proposalLegs } = await db.from("bet_proposal_legs").select("sport,event_id,market_id,odd_id,event_name,market_name,selection,american_odds,event_start_at,sort_order").eq("proposal_id", proposal.id).order("sort_order");
-    const legRows = (proposalLegs || []).map((leg: any) => ({ bet_id: bet.id, provider: "sportsgameodds", bookmaker: "draftkings", sport: leg.sport, event_id: leg.event_id, market_id: leg.market_id, odd_id: leg.odd_id, event_name: leg.event_name, market_name: leg.market_name, selection: leg.selection, ticket_american_odds: leg.american_odds, event_start_at: leg.event_start_at, status: "UPCOMING", sort_order: leg.sort_order }));
-    if (legRows.length) { const { error: legsError } = await db.from("bet_legs").insert(legRows); if (legsError) { await db.from("bets").delete().eq("id", bet.id); return json({ error: "bet_legs_create_failed" }, 500); } }
-    await db.from("bet_proposals").update({ status: "PLACED" }).eq("id", proposal.id);
-    const account = proposal.category === "FUTURE" ? "FUTURES_ALLOCATION" : proposal.category === "SUPER_BOWL" ? "BONUS_BANK" : "WEEKLY_ALLOCATION";
-    await db.from("ledger_transactions").insert({ season_id: season.id, account, transaction_type: "BET_PLACED", amount_cents: -stake, bet_id: bet.id, description: `${proposal.category === "WEEKLY" ? "Weekly" : proposal.category} DraftKings wager placed`, occurred_at: placedAt.toISOString(), created_by: user.id, metadata: { placed_american_odds: placedOdds, sportsbook_ticket_ref: body?.sportsbook_ticket_ref || null } });
-    return json({ ok: true, bet });
-  }
-
-  if (action === "settle_bet") {
-    const betId = String(body?.bet_id || ""); const status = String(body?.status || "").toUpperCase();
-    if (!betId || !["WON","LOST","PUSHED","VOID"].includes(status)) return json({ error: "valid_bet_id_and_status_required" }, 400);
-    const { data: bet } = await db.from("bets").select("id,stake_cents,status,category").eq("id", betId).eq("season_id", season.id).single(); if (!bet) return json({ error: "bet_not_found" }, 404); if (bet.status !== "OPEN") return json({ error: "bet_already_settled" }, 409);
-    let settlementReturn = Number(body?.settlement_return_cents);
-    if (status === "LOST") settlementReturn = 0;
-    if ((status === "PUSHED" || status === "VOID") && !Number.isInteger(settlementReturn)) settlementReturn = bet.stake_cents;
-    if (status === "WON" && (!Number.isInteger(settlementReturn) || settlementReturn <= 0)) return json({ error: "winning_return_required" }, 400);
-    if (!Number.isInteger(settlementReturn) || settlementReturn < 0) return json({ error: "invalid_settlement_return" }, 400);
-    const settledAt = new Date();
-    const { error: updateError } = await db.from("bets").update({ status, settled_at: settledAt.toISOString(), settlement_return_cents: settlementReturn }).eq("id", bet.id); if (updateError) return json({ error: "bet_settlement_failed" }, 500);
-    if (settlementReturn > 0) await db.from("ledger_transactions").insert({ season_id: season.id, account: "BONUS_BANK", transaction_type: "BET_SETTLEMENT_RETURN", amount_cents: settlementReturn, bet_id: bet.id, description: `${status} DraftKings wager return`, occurred_at: settledAt.toISOString(), created_by: user.id, metadata: { settlement_status: status } });
-    return json({ ok: true, bet_id: bet.id, status, settlement_return_cents: settlementReturn });
+  if (action === "confirm_placement" || action === "settle_bet") {
+    const isPlacement = action === "confirm_placement";
+    const id = String(isPlacement ? body?.proposal_id || "" : body?.bet_id || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return json({ error: "invalid_record_id" }, 400);
+    const odds = american(body?.placed_american_odds);
+    const status = String(body?.status || "").toUpperCase();
+    const placedAt = body?.placed_at ? new Date(body.placed_at) : null;
+    if (isPlacement && (odds === null || Math.abs(odds) < 100 || Math.abs(odds) > 2147483647)) return json({ error: "invalid_american_odds" }, 400);
+    if (placedAt && Number.isNaN(placedAt.getTime())) return json({ error: "invalid_placed_at" }, 400);
+    const returned = body?.settlement_return_cents ?? null;
+    if (!isPlacement && returned !== null && (!Number.isInteger(returned) || returned < 0 || returned > 2147483647)) return json({ error: "invalid_settlement_return" }, 400);
+    const { data, error } = isPlacement
+      ? await db.rpc("record_ticket_placement", { p_actor: user.id, p_season: season.id, p_proposal: id, p_odds: odds, p_ticket_ref: body?.sportsbook_ticket_ref || null, p_placed_at: placedAt?.toISOString() || null })
+      : await db.rpc("record_ticket_settlement", { p_actor: user.id, p_season: season.id, p_bet: id, p_status: status, p_return_cents: returned });
+    if (error) {
+      const known = new Set(["invalid_american_odds", "invalid_placement_details", "season_not_found", "commissioner_not_authorized", "proposal_not_found", "placement_conflict", "proposal_not_awaiting_placement", "proposal_legs_required", "allocation_exceeded", "invalid_settlement_status", "bet_not_found", "invalid_settlement_return", "settlement_conflict"]);
+      console.error("commissioner_transaction_failed", { code: error.code });
+      return json({ error: known.has(error.message) ? error.message : "accounting_transaction_failed" }, known.has(error.message) ? 409 : 500);
+    }
+    return json(data);
   }
 
   return json({ error: "unknown_action" }, 400);

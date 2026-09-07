@@ -1,3 +1,7 @@
+function escapeMemberText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+}
+
 const AUTH_SUPABASE_URL = 'https://xvnkwtiydyrksucgiphi.supabase.co';
 const MEMBER_API_URL = `${LIVE_API_ROOT}/member-api`;
 const COMMISSIONER_API_URL = `${LIVE_API_ROOT}/commissioner-api`;
@@ -176,7 +180,7 @@ function renderTeamClaims(body) {
 
   if (membership?.fantasy_team_id) return '';
   if (claim?.status === 'PENDING') {
-    return `<div class="member-card"><div class="member-status-row"><div><strong>${claim.fantasy_team_name}</strong><span>Team claim awaiting commissioner approval</span></div><span class="member-status-chip">PENDING</span></div><button class="member-link-button" id="cancelTeamClaim" style="margin-top:.7rem">Cancel claim</button></div>`;
+    return `<div class="member-card"><div class="member-status-row"><div><strong>${escapeMemberText(claim.fantasy_team_name)}</strong><span>Team claim awaiting commissioner approval</span></div><span class="member-status-chip">PENDING</span></div><button class="member-link-button" id="cancelTeamClaim" style="margin-top:.7rem">Cancel claim</button></div>`;
   }
 
   return `
@@ -186,7 +190,7 @@ function renderTeamClaims(body) {
       <div class="claim-team-grid">
         ${teams.map((team) => {
           const unavailable = team.claimed || team.pending_claim;
-          return `<button class="claim-button ${unavailable ? '' : 'primary'}" data-team-id="${team.team_id}" ${unavailable ? 'disabled' : ''}><strong>${team.team_name}</strong><small>${unavailable ? 'Already claimed / pending' : 'Request this team'}</small></button>`;
+          return `<button class="claim-button ${unavailable ? '' : 'primary'}" data-team-id="${escapeMemberText(team.team_id)}" ${unavailable ? 'disabled' : ''}><strong>${escapeMemberText(team.team_name)}</strong><small>${unavailable ? 'Already claimed / pending' : 'Request this team'}</small></button>`;
         }).join('')}
       </div>
     </div>`;
@@ -204,12 +208,12 @@ function renderMemberModal() {
   body.innerHTML = `
     <div class="member-card">
       <div class="member-status-row">
-        <div><strong>${authSession.user?.email || 'Signed in'}</strong><span>${membership?.role === 'COMMISSIONER' ? 'Commissioner account' : membership?.fantasy_team_name ? 'Approved league owner' : 'League member'}</span></div>
+        <div><strong>${escapeMemberText(authSession.user?.email || 'Signed in')}</strong><span>${membership?.role === 'COMMISSIONER' ? 'Commissioner account' : membership?.fantasy_team_name ? 'Approved league owner' : 'League member'}</span></div>
         <button class="member-link-button" id="memberSignOut">Sign out</button>
       </div>
     </div>
     ${renderTeamClaims(body)}
-    ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${membership.fantasy_team_name}</strong><span>ESPN team ${membership.fantasy_team_id} · ${membership.role}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${award.fantasy_team_name || 'pending'}${eligible ? ' · YOU ARE THE WEEKLY WINNER' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${proposal.status || proposal.decision?.choice || 'decision recorded'}</small>` : ''}</div>` : ''}
+    ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${escapeMemberText(membership.fantasy_team_name)}</strong><span>ESPN team ${escapeMemberText(membership.fantasy_team_id)} · ${escapeMemberText(membership.role)}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${escapeMemberText(award.fantasy_team_name || 'pending')}${eligible ? ' · YOU ARE THE WEEKLY WINNER' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${escapeMemberText(proposal.status || proposal.decision?.choice || 'decision recorded')}</small>` : ''}</div>` : ''}
     ${membership?.role === 'COMMISSIONER' ? `<div class="member-card"><strong>Commissioner controls enabled</strong><span>Team claims, submitted tickets, placement confirmation, and settlement are available in the Commissioner Queue below.</span><button class="member-link-button" id="jumpCommissioner" style="margin-top:.7rem">Open commissioner queue</button></div>` : ''}
     <div class="member-card"><button class="member-link-button" id="refreshMemberAccount">Refresh league status</button></div>`;
 
@@ -336,16 +340,16 @@ function renderCommissionerConsole() {
   if (pendingClaims.length) {
     html += '<div class="commissioner-section-title">Pending team claims</div>' + pendingClaims.map((claim) => `
       <article class="commissioner-persistent-item">
-        <h3>${claim.fantasy_team_name}</h3><p>${claim.display_name} requested ESPN team ${claim.fantasy_team_id}</p>
+        <h3>${escapeMemberText(claim.fantasy_team_name)}</h3><p>${escapeMemberText(claim.display_name)} requested ESPN team ${escapeMemberText(claim.fantasy_team_id)}</p>
         <div class="commissioner-actions"><button class="commissioner-action primary" data-approve-claim="${claim.id}">Approve</button><button class="commissioner-action danger" data-reject-claim="${claim.id}">Reject</button></div>
       </article>`).join('');
   }
   if (pendingProposals.length) {
     html += '<div class="commissioner-section-title">Awaiting DraftKings placement</div>' + pendingProposals.map((proposal) => `
       <article class="commissioner-persistent-item">
-        <h3>${proposal.submitter?.fantasy_team_name || proposal.submitter?.display_name || 'Weekly winner'} · ${commissionerMoney(proposal.proposed_stake_cents)}</h3>
+        <h3>${escapeMemberText(proposal.submitter?.fantasy_team_name || proposal.submitter?.display_name || 'Weekly winner')} · ${commissionerMoney(proposal.proposed_stake_cents)}</h3>
         <p>${proposal.legs?.length || 0}-leg ticket · submitted ${proposal.submitted_at ? new Date(proposal.submitted_at).toLocaleString() : '—'} · estimated ${proposal.estimated_american_odds ? formatOdds(proposal.estimated_american_odds) : 'price unavailable'}</p>
-        <ul class="commissioner-leg-list">${(proposal.legs || []).map((leg) => `<li>${leg.selection} · ${formatOdds(leg.american_odds)}</li>`).join('')}</ul>
+        <ul class="commissioner-leg-list">${(proposal.legs || []).map((leg) => `<li>${escapeMemberText(leg.selection)} · ${formatOdds(leg.american_odds)}</li>`).join('')}</ul>
         <div class="placement-form">
           <input class="commissioner-input" id="actualOdds-${proposal.id}" placeholder="Actual DK odds, e.g. +625" />
           <input class="commissioner-input" id="ticketRef-${proposal.id}" placeholder="DK ticket/reference (optional)" />
@@ -356,7 +360,7 @@ function renderCommissionerConsole() {
   }
   if (openBets.length) {
     html += '<div class="commissioner-section-title">Open tickets</div>' + openBets.map((bet) => `
-      <article class="commissioner-persistent-item"><h3>${bet.category} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${bet.sportsbook_ticket_ref}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
+      <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
   queue.innerHTML = html;
@@ -364,47 +368,58 @@ function renderCommissionerConsole() {
 }
 
 function bindCommissionerActions() {
-  document.querySelectorAll('[data-approve-claim]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Approve this fantasy-team claim?')) return;
+  function bind(selector, action) {
+    document.querySelectorAll(selector).forEach((button) => button.addEventListener('click', async () => {
+      if (button.disabled) return;
+      button.disabled = true;
+      try {
+        const completed = await action(button);
+        if (completed !== false) {
+          await loadCommissionerConsole();
+          await loadLiveLeagueBank();
+        }
+      } catch (error) {
+        showToast(memberErrorText(error.message));
+      } finally {
+        button.disabled = false;
+      }
+    }));
+  }
+  bind('[data-approve-claim]', async (button) => {
+    if (!window.confirm('Approve this fantasy-team claim?')) return false;
     await commissionerRequest('POST', { action: 'approve_claim', claim_id: button.dataset.approveClaim });
-    showToast('Team claim approved.'); await loadCommissionerConsole();
-  }));
-  document.querySelectorAll('[data-reject-claim]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Reject this fantasy-team claim?')) return;
+    showToast('Team claim approved.');
+  });
+  bind('[data-reject-claim]', async (button) => {
+    if (!window.confirm('Reject this fantasy-team claim?')) return false;
     await commissionerRequest('POST', { action: 'reject_claim', claim_id: button.dataset.rejectClaim });
-    showToast('Team claim rejected.'); await loadCommissionerConsole();
-  }));
-  document.querySelectorAll('[data-reject-proposal]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Reject this submitted ticket?')) return;
+    showToast('Team claim rejected.');
+  });
+  bind('[data-reject-proposal]', async (button) => {
+    if (!window.confirm('Reject this submitted ticket?')) return false;
     await commissionerRequest('POST', { action: 'reject_proposal', proposal_id: button.dataset.rejectProposal });
-    showToast('Ticket rejected.'); await loadCommissionerConsole();
-  }));
-  document.querySelectorAll('[data-place-proposal]').forEach((button) => button.addEventListener('click', async () => {
+    showToast('Ticket rejected.');
+  });
+  bind('[data-place-proposal]', async (button) => {
     const id = button.dataset.placeProposal;
-    const odds = document.querySelector(`#actualOdds-${CSS.escape(id)}`)?.value?.trim();
-    const ticketRef = document.querySelector(`#ticketRef-${CSS.escape(id)}`)?.value?.trim();
-    if (!odds) return showToast('Enter the actual combined DraftKings odds first.');
-    if (!window.confirm(`Confirm that you manually placed this ticket in DraftKings at ${odds}?`)) return;
-    try {
-      await commissionerRequest('POST', { action: 'confirm_placement', proposal_id: id, placed_american_odds: odds, sportsbook_ticket_ref: ticketRef || null });
-      showToast('DraftKings placement recorded.'); await loadCommissionerConsole(); await loadLiveLeagueBank();
-    } catch (error) { showToast(memberErrorText(error.message)); }
-  }));
-  document.querySelectorAll('[data-settle-win]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Settle this ticket as WON and credit its total return to the Bonus Bank?')) return;
-    await commissionerRequest('POST', { action: 'settle_bet', bet_id: button.dataset.settleWin, status: 'WON', settlement_return_cents: Number(button.dataset.return) });
-    showToast('Winning return credited to the Bonus Bank.'); await loadCommissionerConsole(); await loadLiveLeagueBank();
-  }));
-  document.querySelectorAll('[data-settle-loss]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Settle this ticket as LOST?')) return;
-    await commissionerRequest('POST', { action: 'settle_bet', bet_id: button.dataset.settleLoss, status: 'LOST', settlement_return_cents: 0 });
-    showToast('Ticket settled as lost.'); await loadCommissionerConsole(); await loadLiveLeagueBank();
-  }));
-  document.querySelectorAll('[data-settle-push]').forEach((button) => button.addEventListener('click', async () => {
-    if (!window.confirm('Settle this ticket as PUSHED/VOID and return the stake?')) return;
-    await commissionerRequest('POST', { action: 'settle_bet', bet_id: button.dataset.settlePush, status: 'PUSHED', settlement_return_cents: Number(button.dataset.return) });
-    showToast('Returned stake recorded.'); await loadCommissionerConsole(); await loadLiveLeagueBank();
-  }));
+    const odds = document.querySelector('#actualOdds-' + CSS.escape(id))?.value?.trim();
+    const ticketRef = document.querySelector('#ticketRef-' + CSS.escape(id))?.value?.trim();
+    if (!odds) { showToast('Enter the actual combined DraftKings odds first.'); return false; }
+    if (!window.confirm('Confirm you manually placed this ticket in DraftKings at ' + odds + '?')) return false;
+    await commissionerRequest('POST', { action: 'confirm_placement', proposal_id: id, placed_american_odds: odds, sportsbook_ticket_ref: ticketRef || null });
+    showToast('DraftKings placement recorded.');
+  });
+  for (const [selector, key, status, message] of [
+    ['[data-settle-win]', 'settleWin', 'WON', 'Winning return credited to the Bonus Bank.'],
+    ['[data-settle-loss]', 'settleLoss', 'LOST', 'Ticket settled as lost.'],
+    ['[data-settle-push]', 'settlePush', 'PUSHED', 'Returned stake recorded.'],
+  ]) {
+    bind(selector, async (button) => {
+      if (!window.confirm('Settle this ticket as ' + status + '?')) return false;
+      await commissionerRequest('POST', { action: 'settle_bet', bet_id: button.dataset[key], status, settlement_return_cents: status === 'LOST' ? 0 : Number(button.dataset.return) });
+      showToast(message);
+    });
+  }
 }
 
 createMemberUi();

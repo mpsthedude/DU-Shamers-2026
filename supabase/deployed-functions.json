@@ -1,7 +1,7 @@
 {
   "project_ref": "xvnkwtiydyrksucgiphi",
   "exported_at": "2026-09-07",
-  "note": "Deployed source baseline exported 2026-09-07; league-dashboard updated to v4 during bank repair. Other functions unchanged. Not an assurance of correctness.",
+  "note": "Deployed source baseline exported 2026-09-07; league-dashboard updated to v4 and commissioner-api to v3. Other functions unchanged. Not an assurance of correctness.",
   "functions": [
     {
       "slug": "member-api",
@@ -11,9 +11,9 @@
     },
     {
       "slug": "commissioner-api",
-      "version": 1,
+      "version": 3,
       "verify_jwt": true,
-      "ezbr_sha256": "2c99e719dd78070fd07397a4d0239878b3d072f5eef6fd9ad8591fc631909a48"
+      "ezbr_sha256": "a5f6c850785227bf9063ead91347afd92df30de1ba703ddede26be8810580bde"
     },
     {
       "slug": "league-dashboard",
