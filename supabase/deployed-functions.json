@@ -1,7 +1,7 @@
 {
   "project_ref": "xvnkwtiydyrksucgiphi",
   "exported_at": "2026-09-07",
-  "note": "Exact deployed source snapshot. Export is not a deployment or assurance of correctness.",
+  "note": "Deployed source baseline exported 2026-09-07; league-dashboard updated to v4 during bank repair. Other functions unchanged. Not an assurance of correctness.",
   "functions": [
     {
       "slug": "member-api",
@@ -17,9 +17,9 @@
     },
     {
       "slug": "league-dashboard",
-      "version": 3,
+      "version": 4,
       "verify_jwt": true,
-      "ezbr_sha256": "1e4f938b9ad2433911cb1adca6fa22a168fcd5efa5c4586932ce56bc1c3d0421"
+      "ezbr_sha256": "d5df8ba4e7892f09a47648d8ff97af6bcf025f228d28c5fce61a23ef703e9e87"
     },
     {
       "slug": "sync-weekly-winner",

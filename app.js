@@ -143,7 +143,7 @@ function renderMarkets() {
       <div class="event-head">
         <div>
           <strong>${event.name}</strong>
-          <div class="event-meta">${event.time} · Sample DraftKings lines</div>
+          <div class="event-meta">${event.time} · ${event.selections.some((selection) => selection.providerOddId) ? 'DraftKings market snapshot' : 'Sample DraftKings lines'}</div>
         </div>
         <span class="sport-chip">${event.sport === 'NCAAF' ? 'COLLEGE' : event.sport}</span>
       </div>
@@ -186,7 +186,7 @@ function renderSlip() {
       <div>
         <strong>${leg.eventName}</strong>
         <span>${leg.selection} · ${formatOdds(leg.odds)}</span>
-        <small>${leg.market} · DraftKings sample line</small>
+        <small>${leg.market} · ${leg.providerOddId ? 'DraftKings market snapshot' : 'DraftKings sample line'}</small>
       </div>
       <button class="remove-leg" data-remove="${leg.id}" aria-label="Remove ${leg.selection}">×</button>
     </div>
@@ -298,14 +298,7 @@ function renderFutures() {
 }
 
 function renderLedger() {
-  $('#ledgerRows').innerHTML = ledger.map((item) => `
-    <tr>
-      <td>${item.date}</td>
-      <td>${item.label}</td>
-      <td>${item.account}</td>
-      <td class="${item.amount >= 0 ? 'amount-credit' : 'amount-debit'}">${item.amount >= 0 ? '+' : '−'}${money(Math.abs(item.amount))}</td>
-    </tr>
-  `).join('');
+  $('#ledgerRows').innerHTML = '<tr><td colspan="4">Loading recorded transactions…</td></tr>';
 }
 
 function renderQueue() {

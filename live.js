@@ -34,11 +34,18 @@ function accountLabel(value) {
 }
 
 function applyLiveAward(award) {
-  if (!award) return;
   const winnerName = document.querySelector('#winnerName');
   const winnerScore = document.querySelector('#winnerScore');
   const label = document.querySelector('.weekly-winner .muted');
   const note = document.querySelector('.weekly-winner .tiny-note');
+
+  if (!award) {
+    if (label) label.textContent = 'Weekly high scorer';
+    if (winnerName) winnerName.textContent = 'Awaiting finalized results';
+    if (winnerScore) winnerScore.textContent = '—';
+    if (note) note.textContent = 'No weekly award has been recorded yet.';
+    return;
+  }
 
   if (label) label.textContent = `Week ${award.week} high scorer`;
 
@@ -62,24 +69,34 @@ function applyLiveAward(award) {
 }
 
 function applyLiveLedger(rows) {
-  if (!Array.isArray(rows) || !rows.length) return;
   const tbody = document.querySelector('#ledgerRows');
   if (!tbody) return;
-  tbody.innerHTML = rows.map((item) => {
+  tbody.replaceChildren();
+  if (!Array.isArray(rows) || !rows.length) {
+    const cell = document.createElement('td');
+    cell.colSpan = 4;
+    cell.textContent = 'No transactions recorded yet.';
+    const row = document.createElement('tr');
+    row.append(cell);
+    tbody.append(row);
+    return;
+  }
+  for (const item of rows) {
     const amount = Number(item.amount_cents || 0) / 100;
-    return `
-      <tr>
-        <td>${shortDate(item.occurred_at)}</td>
-        <td>${item.description || item.transaction_type || 'Transaction'}</td>
-        <td>${accountLabel(item.account)}</td>
-        <td class="${amount >= 0 ? 'amount-credit' : 'amount-debit'}">${amount >= 0 ? '+' : '−'}${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount))}</td>
-      </tr>`;
-  }).join('');
+    const row = document.createElement('tr');
+    const values = [shortDate(item.occurred_at), item.description || item.transaction_type || 'Transaction', accountLabel(item.account), `${amount >= 0 ? '+' : '−'}${centsToMoney(Math.abs(item.amount_cents || 0))}`];
+    values.forEach((value, index) => {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      if (index === 3) cell.className = amount >= 0 ? 'amount-credit' : 'amount-debit';
+      row.append(cell);
+    });
+    tbody.append(row);
+  }
 }
 
 function applyLiveStatus(data) {
-  const badges = [...document.querySelectorAll('.topbar .status-pill')];
-  const dataBadge = badges.find((el) => el.classList.contains('demo'));
+  const dataBadge = document.querySelector('#bankDataStatus');
   if (dataBadge) {
     dataBadge.classList.remove('demo');
     dataBadge.innerHTML = '<span class="dot"></span> Live league bank';
@@ -88,6 +105,11 @@ function applyLiveStatus(data) {
 
   const bonus = document.querySelector('#bonusBank');
   if (bonus) bonus.textContent = centsToMoney(data.bonus_bank_cents || 0);
+
+  for (const [id, key] of Object.entries({ weeklyRemaining: 'weekly_remaining_cents', futuresRemaining: 'futures_remaining_cents', cashPaid: 'cash_payouts_cents', weeklySpent: 'weekly_spent_cents' })) {
+    const metric = document.getElementById(id);
+    if (metric) metric.textContent = Number.isInteger(data.season?.[key]) ? centsToMoney(data.season[key]) : '—';
+  }
 
   applyLiveAward(data.current_award);
   applyLiveLedger(data.ledger);
@@ -104,7 +126,25 @@ async function loadLiveLeagueBank() {
     const data = await response.json();
     applyLiveStatus(data);
   } catch (error) {
-    console.warn('Live league bank unavailable; retaining dashboard fallback.', error);
+    console.warn('Live league bank unavailable.', error);
+    const badge = document.querySelector('#bankDataStatus');
+    if (badge) {
+      badge.textContent = 'League bank unavailable';
+      badge.classList.add('demo');
+      badge.style.color = 'var(--warning)';
+    }
+    for (const id of ['bonusBank', 'weeklyRemaining', 'futuresRemaining', 'cashPaid', 'weeklySpent']) {
+      const metric = document.getElementById(id);
+      if (metric) metric.textContent = '—';
+    }
+    const rows = document.querySelector('#ledgerRows');
+    if (rows) rows.innerHTML = '<tr><td colspan="4">Recorded transactions are unavailable. Reload to retry.</td></tr>';
+    const winner = document.querySelector('#winnerName');
+    const score = document.querySelector('#winnerScore');
+    if (winner) winner.textContent = 'Winner data unavailable';
+    if (score) score.textContent = '—';
+    const note = document.querySelector('.weekly-winner .tiny-note');
+    if (note) note.textContent = 'League data could not be refreshed. Winner and financial records are unavailable.';
   }
 }
 

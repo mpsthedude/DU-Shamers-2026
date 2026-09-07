@@ -15,11 +15,15 @@ Deno.serve(async (req: Request) => {
   if (!url || !serviceKey) return Response.json({ error: "server_not_configured" }, { status: 500, headers: cors });
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: season, error: seasonError } = await db.from("seasons").select("id, year, starting_pool_cents, prize_reserve_cents, futures_budget_cents, weekly_budget_cents, weekly_award_cents, weekly_award_count, leagues!inner(name, execution_book, timezone)").eq("year", 2026).eq("leagues.name", "DU Shamers").single();
-  if (seasonError || !season) return Response.json({ error: "season_not_found" }, { status: 404, headers: cors });
+  if (seasonError) {
+    console.error("dashboard_season_query_failed", { code: seasonError.code });
+    return Response.json({ error: "season_lookup_failed" }, { status: 503, headers: cors });
+  }
+  if (!season) return Response.json({ error: "season_not_found" }, { status: 404, headers: cors });
 
   const [awardsResult, betsResult, ledgerResult] = await Promise.all([
     db.from("weekly_awards").select("week, fantasy_team_id, fantasy_team_name, score, source_status, requires_commissioner_resolution, identified_at").eq("season_id", season.id).order("week", { ascending: false }),
-    db.from("bets").select("id, category, sportsbook, stake_cents, placed_american_odds, potential_return_cents, status, sportsbook_ticket_ref, placed_at, settled_at, settlement_return_cents").eq("season_id", season.id).order("placed_at", { ascending: false }),
+    db.from("bets").select("id, category, sportsbook, stake_cents, placed_american_odds, potential_return_cents, status, placed_at, settled_at, settlement_return_cents").eq("season_id", season.id).order("placed_at", { ascending: false }),
     db.from("ledger_transactions").select("account, transaction_type, amount_cents, description, occurred_at").eq("season_id", season.id).order("occurred_at", { ascending: false }),
   ]);
   if (awardsResult.error || betsResult.error || ledgerResult.error) return Response.json({ error: "dashboard_read_failed" }, { status: 500, headers: cors });

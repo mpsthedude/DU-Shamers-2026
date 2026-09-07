@@ -2,6 +2,18 @@
 
 Audit date: 2026-09-07. Baseline git commit: 1634d06984576b14ff893d70f87a646e6cb2e12e. Source is authoritative over prior narrative handoffs; distinguish inspected code, live observations and untested paths below.
 
+## Repair update: 2026-09-07
+
+- Bank failure diagnosed: service_role lacked SELECT on all application tables. Migration 20260907123023_restore_dashboard_service_reads restores only dashboard SELECT on leagues, seasons, weekly_awards, bets, ledger_transactions, plus schema USAGE. No financial data changed. Browser roles still lack SELECT and RLS remains enabled.
+- league-dashboard v4 deployed: query failures return 503/season_lookup_failed instead of a misleading missing-season response, and public bet objects no longer include private sportsbook ticket references. Its source and version manifest are updated locally.
+- Live HTTP check passed: $1,400 weekly remaining, $400 futures remaining, $0 cash payouts/stakes/Bonus Bank, four ledger rows and pending Week 1 award.
+- Frontend now uses server-calculated financial metrics; no sample ledger is rendered on load/failure. Outages clear stale financial/winner values. Ledger descriptions render as text. Live selection labels identify market snapshots.
+- Future local env files are git-ignored; Pages builds an explicit public-file directory so backend source, tests, docs and credentials cannot accidentally be included in the site artifact.
+- Commissioner email was explicitly chosen and added to the production allowlist in the intervening task. Do not put that address in this public repository. Actual sign-in still untested; service-role member/write grants remain absent and need a separate authenticated workflow repair.
+- Security advisors after permission repair: unchanged 16 intentional RLS INFO notices and two trigger EXECUTE warnings. No new advisory category.
+- Three local bank display regression checks passed: server metrics/empty ledger, safe text rendering, and failure/recovery. Full member accounting and paid-call protections remain unfinished.
+- See docs/LEAGUE_FEATURE_PLAN.md for leaderboard/recap integration design. The baseline observations below are historical where superseded by this update.
+
 ## Identity and architecture
 
 - Repository: https://github.com/mpsthedude/DU-Shamers-2026

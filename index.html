@@ -19,7 +19,7 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <span class="status-pill demo"><span class="dot"></span> Loading live data</span>
+      <span id="bankDataStatus" class="status-pill demo" role="status"><span class="dot"></span> Loading league bank</span>
       <span class="status-pill">DraftKings execution</span>
       <button class="ghost-button" data-scroll="commissioner">Commissioner</button>
     </div>
@@ -71,18 +71,18 @@
         <div class="bonus-bank">
           <div>
             <span>League Bonus Bank</span>
-            <small>Returns from winning wagers</small>
+            <small>Ledger balance, including returns and spending</small>
           </div>
-          <strong id="bonusBank">$0.00</strong>
+          <strong id="bonusBank">—</strong>
         </div>
       </article>
     </section>
 
     <section class="stats-grid">
-      <article class="metric"><span>Starting pool</span><strong>$3,600</strong><small>12 × $300</small></article>
-      <article class="metric"><span>Prize reserve</span><strong>$1,800</strong><small>1st / 2nd / 3rd</small></article>
-      <article class="metric"><span>Futures budget</span><strong>$400</strong><small>Season-long football</small></article>
-      <article class="metric"><span>Weekly controls</span><strong>14</strong><small>$100 each week</small></article>
+      <article class="metric"><span>Weekly funds remaining</span><strong id="weeklyRemaining">—</strong><small>After wagers and cash payouts</small></article>
+      <article class="metric"><span>Futures funds remaining</span><strong id="futuresRemaining">—</strong><small>From the $400 allocation</small></article>
+      <article class="metric"><span>Cash payouts recorded</span><strong id="cashPaid">—</strong><small>Weekly cash portions</small></article>
+      <article class="metric"><span>Weekly wagers recorded</span><strong id="weeklySpent">—</strong><small>Stakes placed in DraftKings</small></article>
     </section>
 
     <section class="content-grid builder-layout" id="builder">
