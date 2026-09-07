@@ -265,12 +265,19 @@ function normalizeDraftKingsEvent(event) {
 }
 
 async function fetchMarketLeague(league) {
+  // Wait for persisted sign-in restoration before attempting a cache miss.
+  const session = typeof authClient !== 'undefined' ? await authClient.auth.getSession().catch(() => null) : null;
+  const headers = liveHeaders();
+  if (session?.data?.session?.access_token) headers.Authorization = `Bearer ${session.data.session.access_token}`;
   const response = await fetch(`${LIVE_MARKETS_URL}?league=${encodeURIComponent(league)}`, {
     method: 'GET',
-    headers: liveHeaders(),
+    headers,
     cache: 'no-store',
   });
-  if (!response.ok) throw new Error(`draftkings-markets ${league} ${response.status}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || 'provider_request_unavailable');
+  }
   return response.json();
 }
 
@@ -300,7 +307,7 @@ async function loadLiveDraftKingsMarkets() {
       state.marketCoverage[league] = results[index].status === 'fulfilled' ? results[index].value.coverage : {complete:false};
     });
 
-    if (!events.length) throw new Error('No live DraftKings markets returned');
+    if (!events.length) throw new Error(results.find(r => r.status === 'rejected')?.reason?.message || 'no_upcoming_markets');
 
     sampleEvents.splice(0, sampleEvents.length, ...events);
     state.legs = [];
@@ -315,8 +322,20 @@ async function loadLiveDraftKingsMarkets() {
     renderMarkets();
     renderSlip();
     const bookNote = document.querySelector('.book-note span');
-    if (bookNote) bookNote.textContent = 'No fresh DraftKings snapshot is available. Paid refreshes stay off until the commissioner configures spending limits.';
+    if (bookNote) bookNote.textContent = marketLoadError(error.message);
   }
+}
+
+function marketLoadError(code) {
+  return ({
+    integrations_disabled: 'The overall integration switch is off. Enable overall reservations in Commissioner Tools; subscription-covered calls can use a $0 budget.',
+    paid_requests_disabled: 'SportsGameOdds refreshes are paused. Enable provider refreshes in Commissioner Tools.',
+    fresh_provider_request_not_authorized: 'No shared prices are cached yet. The commissioner must sign in and select Refresh market snapshots.',
+    provider_usage_refresh_required: 'Provider usage needs checking. Select Check provider usage in Commissioner Tools, then refresh market snapshots.',
+    provider_budget_exhausted: 'The provider request or spending limit has been reached.',
+    integration_budget_exhausted: 'The overall integration budget has been reached.',
+    no_upcoming_markets: 'No upcoming DraftKings games with available odds were returned for this date window.',
+  })[code] || 'DraftKings prices could not be loaded. Try Refresh market snapshots in Commissioner Tools; if it continues, the provider or its limits need checking.';
 }
 
 window.addEventListener('DOMContentLoaded', () => {

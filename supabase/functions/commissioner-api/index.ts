@@ -202,7 +202,7 @@ Deno.serve(async (req: Request) => {
     const p=body.policy;
     if(!p || typeof p.enabled!=='boolean' || !Number.isSafeInteger(p.daily_microusd) || !Number.isSafeInteger(p.monthly_microusd)
       || p.daily_microusd<0 || p.monthly_microusd<0 || p.monthly_microusd>1000000000000 || p.daily_microusd>p.monthly_microusd
-      || (p.enabled && p.daily_microusd===0))return json({error:'invalid_integration_budget'},400);
+      )return json({error:'invalid_integration_budget'},400);
     const {error}=await db.from('integration_budget').update({enabled:p.enabled,daily_microusd:p.daily_microusd,monthly_microusd:p.monthly_microusd}).eq('singleton',true);
     return error?json({error:'integration_budget_update_failed'},500):json({ok:true});
   }

@@ -107,7 +107,7 @@ export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<R
       return response;
     } catch(error) {
       const code=error instanceof Error ? error.message : "";
-      const known=new Set(["integrations_disabled","integration_budget_exhausted","analysis_disabled","analysis_winner_only","analysis_winner_unavailable","analysis_window_closed","analysis_weekly_limit","analysis_cooldown","paid_requests_disabled","fresh_provider_request_not_authorized","provider_refresh_in_progress",
+      const known=new Set(["provider_usage_refresh_required","integrations_disabled","integration_budget_exhausted","analysis_disabled","analysis_winner_only","analysis_winner_unavailable","analysis_window_closed","analysis_weekly_limit","analysis_cooldown","paid_requests_disabled","fresh_provider_request_not_authorized","provider_refresh_in_progress",
         "provider_concurrency_limit","provider_budget_exhausted","provider_user_quota_exhausted"]);
       return Response.json({error:known.has(code)?code:"provider_request_unavailable"},{status:503,
         headers:{"Access-Control-Allow-Origin":"*","Content-Type":"application/json","Cache-Control":"no-store"}});

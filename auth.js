@@ -455,6 +455,7 @@ function bindCommissionerActions() {
     const policy={enabled:document.getElementById('integrationEnabled').checked,daily_microusd:Math.round(Number(daily)*1000000),monthly_microusd:Math.round(Number(monthly)*1000000)};
     if(!window.confirm('Save the overall integration budget'+(policy.enabled?' and allow budgeted provider calls?':' with new paid calls paused?')))return false;
     await commissionerRequest('POST',{action:'set_integration_budget',policy});showToast('Overall budget saved.');
+    if(policy.enabled) await loadLiveDraftKingsMarkets();
   });
   bind('[data-toggle-analysis]',async()=>{
     const enabled=!commissionerData.analysis_policy.enabled;
@@ -480,6 +481,7 @@ function bindCommissionerActions() {
     }
     if(!window.confirm('Save these provider spending limits'+(policy.enabled?' and enable paid odds refreshes?':' with paid refreshes paused?'))) return false;
     await commissionerRequest('POST',{action:'set_provider_budget',policy});
+    if(policy.enabled) await loadLiveDraftKingsMarkets();
     showToast('Provider spending limits saved.');
   });
   bind('[data-pause-budget]', async () => {
