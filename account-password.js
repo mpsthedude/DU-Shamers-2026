@@ -1,4 +1,4 @@
-const ACCOUNT_REDIRECT = 'https://mpsthedude.github.io/DU-Shamers-2026/?account=setup';
+const ACCOUNT_REDIRECT = 'https://dushamers.com/?account=setup';
 function validateAccountPassword(password,confirmation){
   if(typeof password!=='string' || password.length<8 || password.length>128)return 'Use a password between 8 and 128 characters.';
   if(password!==confirmation)return 'The new passwords do not match.';

@@ -1,5 +1,11 @@
 # DU Shamers 2026: verified project handoff
 
+### Custom domain migration
+
+- User authorized dushamers.com as the website address. GitHub Pages custom domain assigned via repository Pages settings (Actions publishing, so no CNAME file is needed). User edited Porkbun apex ALIAS to mpsthedude.github.io and added www CNAME to mpsthedude.github.io. Public DNS resolves apex to all four GitHub Pages IPv4 addresses and www to the expected CNAME.
+- Supabase Site URL now https://dushamers.com/ and the exact https://dushamers.com/?account=setup redirect is added. Previous GitHub redirect retained for compatibility. Frontend recovery and commissioner-api v9 invitation redirect use the new domain. Six account tests and site build pass. HTTPS provisioning and live browser verification are the remaining cutover checks at this writing.
+- User requested eight-character minimum; it is saved in Supabase and published forms/template. Resend domain is now verified per dashboard tab status. First real commissioner invitation remains unsent and AUTH_INVITATIONS_ENABLED remains off pending delivery/account testing.
+
 ### SMTP and Auth dashboard configuration
 
 - September 7 follow-up: user registered dushamers.com in Porkbun and supplied a send-only RESEND_API_KEY in ignored .env. Resend domain created; user corrected the three DNS records. DNS verified event is present; final domain verification remains Pending.

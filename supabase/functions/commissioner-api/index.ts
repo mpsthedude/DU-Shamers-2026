@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
     if(reservation.skipped) return json({ok:true,skipped:reservation.skipped});
     let sent=false,code="invitation_delivery_unknown";
     try {
-      const {error}=await db.auth.admin.inviteUserByEmail(reservation.email,{redirectTo:"https://mpsthedude.github.io/DU-Shamers-2026/?account=setup"});
+      const {error}=await db.auth.admin.inviteUserByEmail(reservation.email,{redirectTo:"https://dushamers.com/?account=setup"});
       sent=!error;code=error?.code||"invitation_delivery_failed";
       const status=sent?"SENT":error?.status>=500?"UNKNOWN":"FAILED";
       const {error:saveError}=await db.from("league_owner_directory").update({invite_status:status,invite_sent_at:sent?new Date().toISOString():null,

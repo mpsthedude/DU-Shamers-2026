@@ -51,7 +51,7 @@ test('invitations are disabled until configured and reservation failures never s
 });
 test('invitation sends only to the reserved private address with the fixed site redirect',async()=>{
   const h=inviteHarness();assert.equal((await h.post()).status,200);
-  assert.equal(h.calls[1][1],'owner@example.invalid');assert.equal(h.calls[1][2].redirectTo,'https://mpsthedude.github.io/DU-Shamers-2026/?account=setup');
+  assert.equal(h.calls[1][1],'owner@example.invalid');assert.equal(h.calls[1][2].redirectTo,'https://dushamers.com/?account=setup');
   assert.equal(h.calls[2][1].invite_status,'SENT');
 });
 test('ambiguous email delivery is recorded for review instead of silently retried',async()=>{

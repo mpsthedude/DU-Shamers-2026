@@ -11,9 +11,9 @@
     },
     {
       "slug": "commissioner-api",
-      "version": 8,
+      "version": 9,
       "verify_jwt": true,
-      "ezbr_sha256": "4f612663c89e7a63a58bfddd3335e443092620a3fe2b6cb11d2b8f15f6365692"
+      "ezbr_sha256": "362867d564220ff1f17077ed625209f59d67f282b789a4b305e7289c5b261330"
     },
     {
       "slug": "league-dashboard",
