@@ -1,6 +1,8 @@
 -- DU Shamers 2026 — initial persistence model
 -- Intended for Supabase Postgres. No sportsbook credentials or provider API keys belong in this schema or repo.
 
+-- Historical initial schema, not a production restore script. Later deployed
+-- claim/auth/futures changes are missing here; see ../PROJECT_HANDOFF.md.
 create extension if not exists pgcrypto;
 
 create table if not exists leagues (

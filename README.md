@@ -2,6 +2,8 @@
 
 A league-facing bankroll and wagering dashboard for the **DU Shamers** fantasy football league.
 
+Current verified implementation and known production issues are documented in [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md). Accepted leaderboard, team earnings, weekly roast, and paid API controls are in [design requirements](docs/DESIGN_REQUIREMENTS.md). The original phase plan below is historical; several integrations are now deployed.
+
 ## League economics
 
 - 12 teams × $300 buy-in = **$3,600 starting pool**

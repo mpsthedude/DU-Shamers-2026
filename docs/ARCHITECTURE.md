@@ -1,5 +1,7 @@
 # Architecture — DU Shamers League Bank
 
+This is the original design, including proposed routes that are not the deployed API. See [the verified handoff](../PROJECT_HANDOFF.md) for current function names, schema drift and live findings, and [accepted design requirements](DESIGN_REQUIREMENTS.md) for the latest scope.
+
 ## Product boundary
 
 The league site is a tracking, analytics, and proposal system. It **never executes wagers**. DraftKings is the only execution sportsbook and the commissioner manually places each accepted ticket.
