@@ -47,6 +47,11 @@ Deno.serve(async (req: Request) => {
     earnings:earningsResult.error?null:earningsResult.data,
   };
   const trackerResult=await db.rpc('tracker_ticket_data',{p_season:season.id});
+  const [futuresHistory,futuresMappings,futuresPolicy]=await Promise.all([
+    db.from('futures_odds_history').select('bet_id,week,american_odds,observed_at').order('week'),
+    db.from('futures_feed_mapping').select('bet_id'),
+    db.from('futures_feed_policy').select('enabled').eq('singleton',true).single(),
+  ]);
   return Response.json({
     weekly_tracker:trackerResult.error?null:ticketProgress(trackerResult.data||[]),
     editions:editionsResult.error?null:(editionsResult.data||[]).map((e:any)=>{
@@ -73,7 +78,12 @@ Deno.serve(async (req: Request) => {
     },
     current_award: awardsResult.data?.[0] ?? null,
     weekly_awards: awardsResult.data ?? [],
-    bets: betsResult.data ?? [],
+    bets: (betsResult.data ?? []).map((b:any)=>({...b,
+      futures_history:futuresHistory.error?null:(futuresHistory.data||[]).filter((h:any)=>h.bet_id===b.id),
+      futures_covered:futuresMappings.error?null:(futuresMappings.data||[]).some((m:any)=>m.bet_id===b.id),
+      futures_automatic:futuresPolicy.data?.enabled===true,
+      completed_week:Math.max(0,...(snapshot?.payload?.completed_weeks||[]).map((w:any)=>w.week)),
+    })),
     ledger,
     bonus_bank_cents: bonusBankCents,
     generated_at: new Date().toISOString(),
