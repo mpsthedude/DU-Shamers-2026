@@ -342,7 +342,7 @@ function providerBudgetMarkup() {
     <label><input id="budget-enabled" type="checkbox" ${p.enabled?'checked':''}> Enable paid odds refreshes within these limits</label>
     <div class="commissioner-actions"><button class="commissioner-action primary" data-save-budget>Save limits</button>
     <button class="commissioner-action danger" data-pause-budget>Pause paid calls</button>
-    <button class="commissioner-action" data-refresh-snapshots>Refresh market snapshots</button></div>
+    <button class="commissioner-action" data-refresh-snapshots>Reload daily game list</button></div>
   </article>`;
 }
 

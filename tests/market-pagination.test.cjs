@@ -1,10 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {stripTypeScriptTypes}=require('node:module');
-const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/draftkings-markets/index.ts','utf8').replace(/^import .*;\r?\n/gm,''));
+const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/_shared/builder-markets.ts','utf8')).replace('export async function','async function');
 function event(id){return {eventID:id,leagueID:'NCAAF',status:{startsAt:new Date(Date.now()+86400000).toISOString()},odds:{home:{oddID:'points-home-game-ml-home',byBookmaker:{draftkings:{available:true,odds:150}}}}};}
-async function run(pages){let handler;const calls=[];const ctx=vm.createContext({Request,Response,URL,URLSearchParams,console,
- Deno:{env:{get:()=> 'fixture'},serve:fn=>handler=fn},paidHandler:fn=>req=>fn(req,async url=>{calls.push(new URL(url));const page=pages[calls.length-1];if(page instanceof Error)throw page;return Response.json(page);})});
- vm.runInContext(source,ctx);const response=await handler(new Request('https://example.invalid?league=NCAAF'));return {data:await response.json(),calls};}
+async function run(pages){const calls=[];const ctx=vm.createContext({Request,Response,URL,URLSearchParams,console});vm.runInContext(source,ctx);const data=await ctx.collectBuilderMarkets('NCAAF','fixture',async url=>{calls.push(new URL(url));const page=pages[calls.length-1];if(page instanceof Error)throw page;return Response.json(page);});return {data:JSON.parse(JSON.stringify(data)),calls};}
 test('pages share fixed date bounds, preserve opaque cursors and deduplicate games',async()=>{
  const {data,calls}=await run([{data:[event('a')],nextCursor:'opaque + / = token'},{data:[event('a'),event('b')]}]);
  assert.equal(data.events.length,2);assert.equal(data.coverage.complete,true);

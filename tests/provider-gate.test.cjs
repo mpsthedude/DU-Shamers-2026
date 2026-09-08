@@ -44,7 +44,7 @@ test('canonical set ordering reuses the same request key',async()=>{
   assert.equal(h.calls[0].args.p_key,h.calls[1].args.p_key);
 });
 
-for(const slug of ['draftkings-markets','draftkings-event-props','analyze-ticket','member-api','draftkings-futures','integration-health']){
+for(const slug of ['draftkings-event-props','analyze-ticket','member-api','draftkings-futures','integration-health']){
   test(slug+' cannot call a provider while the global gate is disabled',async()=>{
     const h=context({error:{message:'paid_requests_disabled'}});
     vm.runInContext(source(slug+'/index.ts'),h.ctx);

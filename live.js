@@ -281,15 +281,15 @@ async function fetchMarketLeague(league) {
   return response.json();
 }
 
-function markMarketsLive(count, observed) {
+function markMarketsLive(count, observed, stale = false) {
   const bookNote = document.querySelector('.book-note span');
-  if (bookNote) bookNote.textContent = `${count} upcoming NFL/college events loaded from shared DraftKings snapshots${observed ? ' · observed ' + new Date(observed).toLocaleString() : ''}. Prices are checked again before submission.`;
+  if (bookNote) bookNote.textContent = `${count} upcoming NFL/college events from the automatic daily DraftKings update${observed ? ' · observed ' + new Date(observed).toLocaleString() : ''}. ${stale ? 'Daily update delayed; showing older prices. ' : ''}Prices are checked again before submission.`;
 
   const marketHeading = document.querySelector('.markets-panel .section-label');
-  if (marketHeading) marketHeading.textContent = 'LIVE DRAFTKINGS BET BUILDER';
+  if (marketHeading) marketHeading.textContent = 'DAILY DRAFTKINGS BET BUILDER';
 }
 
-async function loadLiveDraftKingsMarkets() {
+async function loadLiveDraftKingsMarkets({preserveTicket = false} = {}) {
   try {
     const results = await Promise.allSettled([
       fetchMarketLeague('NFL'),
@@ -310,15 +310,15 @@ async function loadLiveDraftKingsMarkets() {
     if (!events.length) throw new Error(results.find(r => r.status === 'rejected')?.reason?.message || 'no_upcoming_markets');
 
     sampleEvents.splice(0, sampleEvents.length, ...events);
-    state.legs = [];
+    if (!preserveTicket) state.legs = [];
     renderMarkets();
     renderSlip();
     const observations = results.filter(r => r.status === 'fulfilled').map(r => r.value?.provider_cache?.oldest_observed_at).filter(Boolean).sort();
-    markMarketsLive(events.length, observations[0]);
+    markMarketsLive(events.length, observations[0], results.some(r => r.status === 'fulfilled' && r.value?.stale));
   } catch (error) {
     console.warn('DraftKings snapshots unavailable.', error);
     sampleEvents.splice(0, sampleEvents.length);
-    state.legs = [];
+    if (!preserveTicket) state.legs = [];
     renderMarkets();
     renderSlip();
     const bookNote = document.querySelector('.book-note span');
@@ -328,6 +328,7 @@ async function loadLiveDraftKingsMarkets() {
 
 function marketLoadError(code) {
   return ({
+    daily_snapshot_unavailable: 'The first automatic daily game update is pending, or saved data is unavailable.',
     integrations_disabled: 'The overall integration switch is off. Enable overall reservations in Commissioner Tools; subscription-covered calls can use a $0 budget.',
     paid_requests_disabled: 'SportsGameOdds refreshes are paused. Enable provider refreshes in Commissioner Tools.',
     fresh_provider_request_not_authorized: 'No shared prices are cached yet. The commissioner must sign in and select Refresh market snapshots.',
@@ -343,4 +344,5 @@ window.addEventListener('DOMContentLoaded', () => {
   loadLiveDraftKingsMarkets();
   // Only reads the shared dashboard snapshot; never dispatches provider refreshes.
   setInterval(()=>{if(document.visibilityState==='visible')loadLiveLeagueBank();},180000);
+  setInterval(()=>{if(document.visibilityState==='visible')loadLiveDraftKingsMarkets({preserveTicket:true});},300000);
 });
