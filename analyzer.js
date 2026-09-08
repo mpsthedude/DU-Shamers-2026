@@ -166,7 +166,7 @@ async function analyzeLiveTicket() {
     renderLiveAnalysis(result);
   } catch (error) {
     console.warn('Live ticket analysis failed', error);
-    const messages={analysis_weekly_limit:'Your five fresh analyses for this week have been used.',analysis_cooldown:'Wait two minutes between fresh analyses.',analysis_winner_only:'Only the weekly winner can request fresh analysis.',analysis_disabled:'Fresh analysis is paused by the commissioner.',analysis_window_closed:'The weekly analysis window is closed.',provider_budget_exhausted:'The shared provider budget has been reached.'};
+    const messages={analysis_winner_unavailable:'Fresh analysis unlocks after ESPN confirms the weekly high-score winner. No winner is confirmed yet.',integrations_disabled:'Overall integrations are paused in Commissioner Tools.',provider_usage_refresh_required:'Provider usage needs checking in Commissioner Tools before fresh analysis.',analysis_weekly_limit:'Your five fresh analyses for this week have been used.',analysis_cooldown:'Wait two minutes between fresh analyses.',analysis_winner_only:'Only the weekly winner can request fresh analysis.',analysis_disabled:'Fresh analysis is paused by the commissioner.',analysis_window_closed:'The weekly analysis window is closed.',provider_budget_exhausted:'The shared provider budget has been reached.'};
     showToast(messages[error.message] || 'Live analysis is temporarily unavailable.');
   } finally {
     if(typeof refreshMemberState==='function')await refreshMemberState({refreshCommissioner:false});
