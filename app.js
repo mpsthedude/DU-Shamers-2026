@@ -337,24 +337,24 @@ function renderFuturesTrend(bet) {
   const probability = (n) => n > 0 ? 100 / (n + 100) : -n / (-n + 100);
   const pct = (p) => (p * 100).toFixed(1) + '%';
   const original = probability(bet.placed_american_odds);
-  const history = (bet.futures_history || []).filter(h => Number.isInteger(h.american_odds) && Math.abs(h.american_odds) >= 100).sort((a,b) => a.week-b.week);
+  const history = (bet.futures_history || []).filter(h => Number.isInteger(h.american_odds) && Math.abs(h.american_odds) >= 100).sort((a,b) => Date.parse(a.snapshot_date || a.observed_at)-Date.parse(b.snapshot_date || b.observed_at));
   const latest = history.at(-1);
   if (!latest) return `<div class="future-trend"><strong>Ticket implied chance ${pct(original)}</strong><p>${bet.futures_covered === false ? 'This exact futures market is not available from the connected feed. Automatic comparison unavailable.' : bet.futures_history === null ? 'Market history temporarily unavailable.' : 'Awaiting the first automatic DraftKings price check.'}</p></div>`;
   const current = probability(latest.american_odds), change = (current-original)*100;
   const direction = Math.abs(change)<0.00001 ? 'Unchanged' : change>0 ? 'Improved' : 'Declined';
-  const stale = Date.now()-Date.parse(latest.observed_at)>8*86400000;
-  const pending = (bet.completed_week || 0)>latest.week;
+  const stale = Date.now()-Date.parse(latest.observed_at)>25*3600000;
+  const pending = stale;
   const values = [original,...history.map(h=>probability(h.american_odds))];
   const low = Math.max(0,Math.min(...values)-0.005), high = Math.max(...values)+0.005;
   const coordinates = values.map((v,i)=>[8+i*184/(values.length-1),58-(v-low)/(high-low)*44]);
   const points = coordinates.map(p=>p.join(',')).join(' ');
-  const dots = coordinates.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="3"><title>${esc(i===0?'Ticket: '+pct(original):(history[i-1].week===0?'Initial check':'Week '+history[i-1].week)+': '+formatOdds(history[i-1].american_odds)+' / '+pct(values[i]))}</title></circle>`).join('');
+  const dots = coordinates.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="3"><title>${esc(i===0?'Ticket: '+pct(original):(history[i-1].snapshot_date || 'Saved check')+': '+formatOdds(history[i-1].american_odds)+' / '+pct(values[i]))}</title></circle>`).join('');
   return `<div class="future-trend">
     <strong class="future-move ${direction.toLowerCase()}">${stale || pending ? 'Last observed: ' : ''}${direction} · ${change>0?'+':''}${change.toFixed(2)} percentage points</strong>
     <p>Ticket ${pct(original)} → Latest ${pct(current)}<br>Latest DraftKings odds <b>${esc(formatOdds(latest.american_odds))}</b></p>
-    <svg class="future-chart" viewBox="0 0 200 74" role="img" aria-label="Market-implied chance: ticket ${pct(original)}, latest ${pct(current)}"><text x="8" y="10">${pct(high)}</text><polyline points="${points}"/>${dots}<text x="8" y="72">Ticket</text><text x="135" y="72">${latest.week ? 'Week '+latest.week : 'Initial check'}</text></svg>
-    <p class="tiny-note">${bet.status!=='OPEN'?'Final saved market history. ':''}${stale?'Older price · ':''}${pending?'Weekly update pending · ':''}${bet.futures_automatic?'Automatic weekly check':'Automatic checks paused'}<br>Price as of ${esc(new Date(latest.observed_at).toLocaleString('en-US'))}</p>
-    <details><summary>Price history</summary><table><thead><tr><th>Check</th><th>DK odds</th><th>Implied</th></tr></thead><tbody><tr><td>Ticket</td><td>${esc(formatOdds(bet.placed_american_odds))}</td><td>${pct(original)}</td></tr>${history.map(h=>`<tr><td>${h.week?'Week '+h.week:'Initial'}</td><td>${esc(formatOdds(h.american_odds))}</td><td>${pct(probability(h.american_odds))}</td></tr>`).join('')}</tbody></table></details>
+    <svg class="future-chart" viewBox="0 0 200 74" role="img" aria-label="Market-implied chance: ticket ${pct(original)}, latest ${pct(current)}"><text x="8" y="10">${pct(high)}</text><polyline points="${points}"/>${dots}<text x="8" y="72">Ticket</text><text x="135" y="72">Latest check</text></svg>
+    <p class="tiny-note">${bet.status!=='OPEN'?'Final saved market history. ':''}${stale?'Older price · ':''}${pending?'Daily update pending · ':''}${bet.futures_automatic?'Automatic daily check':'Automatic checks paused'}<br>Price as of ${esc(new Date(latest.observed_at).toLocaleString('en-US'))}</p>
+    <details><summary>Price history</summary><table><thead><tr><th>Check</th><th>DK odds</th><th>Implied</th></tr></thead><tbody><tr><td>Ticket</td><td>${esc(formatOdds(bet.placed_american_odds))}</td><td>${pct(original)}</td></tr>${history.map(h=>`<tr><td>${esc(h.snapshot_date || new Date(h.observed_at).toLocaleDateString('en-US'))}</td><td>${esc(formatOdds(h.american_odds))}</td><td>${pct(probability(h.american_odds))}</td></tr>`).join('')}</tbody></table></details>
   </div>`;
 }
 

@@ -9,10 +9,10 @@ do $$ declare s uuid:=gen_random_uuid(); l uuid:=gen_random_uuid(); b uuid; r js
  update public.futures_feed_policy set enabled=true;
  r:=public.claim_futures_refresh();
  if r->>'run_id' is null or (r->>'week')::integer<>1 then raise exception 'week claim failed'; end if;
- if public.claim_futures_refresh()->>'skipped'<>'retry_limit' then raise exception 'duplicate run accepted'; end if;
+ if public.claim_futures_refresh()->>'skipped'<>'day_attempted' then raise exception 'duplicate run accepted'; end if;
  update public.futures_feed_runs set success=true where id=(r->>'run_id')::uuid;
- if public.claim_futures_refresh()->>'skipped'<>'week_saved' then raise exception 'saved week refreshed'; end if;
- update public.futures_feed_runs set success=false,started_at=now()-interval '13 hours' where id=(r->>'run_id')::uuid;
+ if public.claim_futures_refresh()->>'skipped'<>'day_attempted' then raise exception 'saved day refreshed'; end if;
+ update public.futures_feed_runs set success=false,started_at=now()-interval '2 days' where id=(r->>'run_id')::uuid;
  update public.futures_feed_policy set monthly_request_limit=0;
  if public.claim_futures_refresh()->>'skipped'<>'monthly_cap' then raise exception 'cap bypassed'; end if;
  update public.futures_feed_policy set monthly_request_limit=30;

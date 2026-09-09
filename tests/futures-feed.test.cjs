@@ -21,6 +21,7 @@ test('market visual distinguishes improved, declined, unavailable and delayed ob
  const b={status:'OPEN',placed_american_odds:1900,futures_covered:true,futures_automatic:true,futures_history:[{week:1,american_odds:1400,observed_at:new Date().toISOString()}]};
  assert.match(c.renderFuturesTrend(b),/Improved.*1.67 percentage points/);
  assert.match(c.renderFuturesTrend({...b,futures_history:[{week:1,american_odds:2500,observed_at:'2020-01-01'}],completed_week:2}),/Declined/);
- assert.match(c.renderFuturesTrend({...b,futures_history:[{week:1,american_odds:2500,observed_at:'2020-01-01'}],completed_week:2}),/Weekly update pending/);
+ assert.match(c.renderFuturesTrend({...b,futures_history:[{week:1,american_odds:2500,observed_at:'2020-01-01'}],completed_week:2}),/Daily update pending/);
  assert.match(c.renderFuturesTrend({...b,futures_history:[],futures_covered:false}),/comparison unavailable/);
 });
+

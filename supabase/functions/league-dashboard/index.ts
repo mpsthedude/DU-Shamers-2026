@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
   };
   const trackerResult=await db.rpc('tracker_ticket_data',{p_season:season.id});
   const [futuresHistory,futuresMappings,futuresPolicy]=await Promise.all([
-    db.from('futures_odds_history').select('bet_id,week,american_odds,observed_at').order('week'),
+    db.from('futures_odds_history').select('bet_id,week,snapshot_date,american_odds,observed_at').order('snapshot_date'),
     db.from('futures_feed_mapping').select('bet_id'),
     db.from('futures_feed_policy').select('enabled').eq('singleton',true).single(),
   ]);

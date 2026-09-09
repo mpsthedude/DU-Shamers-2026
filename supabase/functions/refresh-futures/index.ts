@@ -21,9 +21,9 @@ Deno.serve(async(req:Request)=>{
    const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
    if(!response.ok){failed=true;continue;}
    const events=await response.json();
-   const rows=job.mappings.filter((m:any)=>m.sport_key===sport).map((m:any)=>matchFutures(events,m)).filter(Boolean).map((r:any)=>({...r,week:job.week}));
-   if(rows.length){const result=await db.from('futures_odds_history').upsert(rows,{onConflict:'bet_id,week'});if(result.error)throw Error('save_failed');saved+=rows.length;}
-   // Missing/suspended outcomes are retried within bounded limits, never priced at zero.
+   const rows=job.mappings.filter((m:any)=>m.sport_key===sport).map((m:any)=>matchFutures(events,m)).filter(Boolean).map((r:any)=>({...r,week:job.week,snapshot_date:job.snapshot_date}));
+   if(rows.length){const result=await db.from('futures_odds_history').upsert(rows,{onConflict:'bet_id,snapshot_date'});if(result.error)throw Error('save_failed');saved+=rows.length;}
+   // Missing/suspended outcomes are retried the next day, never priced at zero.
    if(rows.length!==job.mappings.filter((m:any)=>m.sport_key===sport).length)failed=true;
   }
  }catch{failed=true;} // Never log URLs, provider responses, or credentials.

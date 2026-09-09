@@ -29,3 +29,9 @@ Only DraftKings outrights with exact matching event, market and outcome are stor
 Validation includes Node tests for matching and movement, rollback SQL tests for duplicate runs, completed-week gating, request caps, settlement exclusions and private access, and desktop/mobile checks. No financial ledger entries or settlements are written by this feature.
 
 Provider reference: https://the-odds-api.com/liveapi/guides/v4/
+
+## Daily refresh (September 9 update)
+
+This supersedes the original weekly cadence. The existing futures job now runs at 12:20 UTC daily (7:20 AM Central daylight time, 6:20 AM standard time). One attempt per UTC date; a failure retries the next day. It no longer waits for a completed fantasy week or a fresh ESPN snapshot. Two feed requests cover the four mapped open positions, with a local ceiling of 62 requests per calendar month. Unsupported AFC-winner coverage remains explicit. No wager, cash-out, or settlement action is automated.
+
+History now has one row per bet and snapshot date, preserving previous observations. The page orders by date and marks provider prices older than 25 hours as stale. An available response is not fabricated when a market is missing or suspended. Original stakes and ticket odds stay unchanged.
