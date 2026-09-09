@@ -3,7 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const assets = new Set(['ticket-rules.js','app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
+const assets = new Set(['push.js','push-sw.js','manifest.webmanifest','hub-icon.svg','hub-icon.png','ticket-rules.js','app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
 const server = http.createServer((req,res) => {
   const pathname = new URL(req.url,'http://localhost').pathname;
   res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'none'; frame-src 'none'; base-uri 'none'");
@@ -22,7 +22,7 @@ const server = http.createServer((req,res) => {
     res.setHeader('Content-Type','application/json');return res.end(fs.readFileSync(file));
   }
   if(name !== 'practice.js' && !assets.has(name)){res.writeHead(404);return res.end();}
-  res.setHeader('Content-Type', name.endsWith('.css')?'text/css':'text/javascript');
+  res.setHeader('Content-Type', name.endsWith('.css')?'text/css':name.endsWith('.png')?'image/png':name.endsWith('.svg')?'image/svg+xml':name.endsWith('.webmanifest')?'application/manifest+json':'text/javascript');
   res.end(fs.readFileSync(name === 'practice.js'?path.join(root,'tests','practice','fixture.js'):path.join(root,name)));
 });
 server.listen(Number(process.env.PRACTICE_PORT || 4174),'127.0.0.1',()=>console.log('Local practice: http://127.0.0.1:'+server.address().port));

@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
 const assets = ['ticket-rules.js', 'app.js', 'standings.js', 'editions.js', 'weekly-tracker.js', 'live.js', 'props.js', 'analyzer.js', 'account-password.js', 'auth.js', 'styles.css', 'props.css', 'member.css', 'league-theme.css'];
+assets.push('push.js','push-sw.js','manifest.webmanifest','hub-icon.svg','hub-icon.png');
 fs.mkdirSync(output, { recursive: true });
 const versions = new Map();
 for (const asset of assets) {

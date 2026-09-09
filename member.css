@@ -36,3 +36,7 @@
 
 .choice-button[hidden] { display: none !important; }
 .market-option:disabled, .prop-option:disabled { opacity: .45; cursor: not-allowed; }
+#commissionerPush { padding:1rem; margin:0 0 1rem; border:1px solid var(--border, #d5d9dd); border-radius:8px; }
+#commissionerPush .button-row { display:flex; flex-wrap:wrap; gap:.5rem; }
+#commissionerPush button { width:auto; min-height:44px; }
+#commissionerPush button:disabled { opacity:.5; cursor:default; }

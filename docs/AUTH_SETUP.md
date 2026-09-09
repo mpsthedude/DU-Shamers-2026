@@ -4,7 +4,7 @@
 
 - Custom SMTP saved in Supabase: `smtp.resend.com`, port 465, username `resend`, sender `DU Shamers <league@dushamers.com>`. Existing send-only Resend API key entered securely; no credential copied into tracked files.
 - Production Site URL and the exact `?account=setup` redirect below are saved and verified in the dashboard.
-- Public signups disabled; email confirmations and secure email changes remain enabled. Minimum password length is 8, current password is required for normal password changes, email link expiration is 3600 seconds. Recovery sessions and initial password setup are exempt from the current-password check in Supabase Auth.
+- Public signups disabled; email confirmations and secure email changes remain enabled. Minimum password length is 8, current password is required for normal password changes, email link expiration is 259200 seconds (72 hours; verified through the Management API on September 9, 2026). Recovery sessions and initial password setup are exempt from the current-password check in Supabase Auth.
 - Invitation subject `Your DU Shamers 2026 invitation` and recovery subject `Reset your DU Shamers password`, with the two repository HTML templates, saved and previewed in Supabase.
 - Resend reports DNS verified but final domain status remains Pending. No invitation emails sent. AUTH_INVITATIONS_ENABLED remains off pending actual delivery/account tests. First commissioner invitation and end-to-end password tests are still required.
 

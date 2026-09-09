@@ -421,6 +421,7 @@ function renderCommissionerConsole() {
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
   queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + providerBudgetMarkup() + html;
   bindCommissionerActions();
+  if(typeof renderCommissionerPush==='function')renderCommissionerPush();
 }
 
 function bindCommissionerActions() {
