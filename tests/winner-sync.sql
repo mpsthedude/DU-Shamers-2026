@@ -22,6 +22,8 @@ begin
     'completed_weeks',jsonb_build_array(jsonb_build_object('week',1,'scores',
       (select jsonb_agg(jsonb_build_object('team_id',i::text,'score',i)) from generate_series(1,12) i))));
   original_payload:=payload;
+  insert into public.weekly_awards(season_id,week,fantasy_team_id,source_status,award_basis)
+    values(season,1,'13','WINNER_IDENTIFIED','PREVIOUS_CHAMPION');
   set local role service_role;
   perform set_config('du_test.now','2026-09-14 13:05Z',true);
   r:=public.begin_weekly_sync(season);
@@ -32,7 +34,7 @@ begin
   begin perform public.finish_weekly_sync(season,gen_random_uuid(),repeat('a',64),payload);raise exception 'expected_lease';
     exception when others then if sqlerrm<>'sync_lease_expired' then raise; end if; end;
   r:=public.finish_weekly_sync(season,lease,repeat('a',64),payload);
-  select id,identified_at into award,initial_time from public.weekly_awards where season_id=season and week=1;
+  select id,identified_at into award,initial_time from public.weekly_awards where season_id=season and week=2;
   if r->>'winner_team_id'<>'12' or award is null then raise exception 'winner_failed'; end if;
   if public.begin_weekly_sync(season)->>'skipped'<>'sync_cooldown' then raise exception 'cooldown_failed'; end if;
   -- Same snapshot retry must preserve the original submission window and unique award.
@@ -40,7 +42,7 @@ begin
   perform set_config('du_test.now','2026-09-15 13:25Z',true);
   r:=public.begin_weekly_sync(season);lease:=(r->>'lease_id')::uuid;
   r:=public.finish_weekly_sync(season,lease,repeat('a',64),payload);
-  if (select count(*) from public.weekly_awards where season_id=season)<>1
+  if (select count(*) from public.weekly_awards where season_id=season)<>2
     or (select identified_at from public.weekly_awards where id=award)<>initial_time then raise exception 'retry_changed_award'; end if;
   -- A failed snapshot insert must roll back a changed award too.
   update public.weekly_sync_state set last_attempt_at=null where season_id=season;
@@ -81,6 +83,9 @@ begin
   r:=public.begin_weekly_sync(season);lease:=(r->>'lease_id')::uuid;
   r:=public.finish_weekly_sync(season,lease,repeat('a',64),original_payload);
   if not (select requires_commissioner_resolution from public.weekly_awards where id=award) then raise exception 'review_silently_cleared'; end if;
+  if not exists(select 1 from public.weekly_awards where season_id=season and week=1
+    and award_basis='PREVIOUS_CHAMPION' and fantasy_team_id='13' and score is null)
+    then raise exception 'champion_overwritten'; end if;
   -- Incomplete and stale periods never replace the award.
   update public.weekly_sync_state set last_attempt_at=null where season_id=season;
   r:=public.begin_weekly_sync(season);lease:=(r->>'lease_id')::uuid;

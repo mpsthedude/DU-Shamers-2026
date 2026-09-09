@@ -81,6 +81,8 @@ function memberErrorText(code) {
     not_this_weeks_high_scorer: 'Only this week’s high-scoring fantasy team can submit the league wager.',
     weekly_ticket_already_submitted: 'This week’s ticket has already been submitted.',
     selection_unavailable: 'At least one DraftKings selection is no longer available. Refresh the live market and try again.',
+    conflicting_selections: 'These selections cannot all win. Remove the conflicting pick.',
+    champion_full_wager_required: 'The champion opening ticket must use the full $100.',
     selection_changed: 'DraftKings changed a price or line. Refresh the markets and review your ticket before submitting again.',
     stale_weekly_award: 'The weekly award has changed. Refresh your league account before submitting.',
     legs_limit: 'Choose between 1 and 12 selections.',
@@ -194,7 +196,7 @@ function renderMemberModal() {
       </div>
     </div>
     ${membership ? '' : '<div class="member-card"><strong>Team access unavailable</strong><span>Use the email address on your league invitation. Contact the commissioner if your account needs a different email mapping.</span></div>'}
-    ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${escapeMemberText(membership.fantasy_team_name)}</strong><span>ESPN team ${escapeMemberText(membership.fantasy_team_id)} · ${escapeMemberText(membership.role)}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${escapeMemberText(award.fantasy_team_name || 'pending')}${eligible ? ' · YOU ARE THE WEEKLY WINNER' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${escapeMemberText(proposal.status || proposal.decision?.choice || 'decision recorded')}</small>` : ''}</div>` : ''}
+    ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${escapeMemberText(membership.fantasy_team_name)}</strong><span>ESPN team ${escapeMemberText(membership.fantasy_team_id)} · ${escapeMemberText(membership.role)}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${escapeMemberText(award.fantasy_team_name || 'pending')}${eligible ? ' · YOU HAVE THIS WEEK’S BETTING RIGHTS' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${escapeMemberText(proposal.status || proposal.decision?.choice || 'decision recorded')}</small>` : ''}</div>` : ''}
     ${membership?.role === 'COMMISSIONER' ? `<div class="member-card"><strong>Commissioner controls enabled</strong><span>Team claims, submitted tickets, placement confirmation, and settlement are available in the Commissioner Queue below.</span><button class="member-link-button" id="jumpCommissioner" style="margin-top:.7rem">Open commissioner queue</button></div>` : ''}
     <div class="member-card"><strong>Account settings</strong><p>Your sign-in email is managed by the commissioner so team ownership stays accurate.</p><button class="member-link-button" id="changeAccountPassword">Change password</button> <button class="member-link-button" id="refreshMemberAccount">Refresh league status</button></div>`;
 
@@ -238,6 +240,9 @@ function updateSubmissionAccess() {
   const canChoose = Boolean(authSession && memberSessionData?.membership?.fantasy_team_id &&
     memberSessionData?.eligible_weekly_winner && memberSessionData?.submission_window_open &&
     (!memberSessionData?.current_proposal || memberSessionData.current_proposal.status === 'REJECTED'));
+  const champion = memberSessionData?.current_award?.award_basis === 'PREVIOUS_CHAMPION';
+  document.querySelectorAll('[data-choice="split"]').forEach(b=>{b.hidden=champion;b.disabled=champion;});
+  if (canChoose && champion) { state.choice='ride'; renderChoice(); }
   document.querySelector('.weekly-winner')?.classList.toggle('hidden', !canChoose);
   document.querySelector('.hero-grid')?.classList.toggle('bank-only', !canChoose);
   replaceSubmitHandler();
@@ -253,6 +258,8 @@ function updateSubmissionAccess() {
 }
 
 async function submitPersistentTicket() {
+  const conflict = ticketConflict(state.legs);
+  if (conflict) return showToast(conflict);
   if (!authSession || !memberSessionData?.membership?.fantasy_team_id || !memberSessionData?.eligible_weekly_winner) {
     openMemberModal();
     if (authSession && memberSessionData?.membership?.fantasy_team_id && !memberSessionData?.eligible_weekly_winner) showToast('Only this week’s high scorer can submit the league wager.');

@@ -1,6 +1,6 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
-const assets=new Set(['app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
+const assets=new Set(['ticket-rules.js','app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
 http.createServer((req,res)=>{
  res.setHeader('Cache-Control','no-store');
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://xvnkwtiydyrksucgiphi.supabase.co wss://xvnkwtiydyrksucgiphi.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-src 'none'");

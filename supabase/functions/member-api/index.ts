@@ -1,3 +1,4 @@
+import { ticketConflict } from "../_shared/ticket-rules.ts";
 import { paidHandler } from "../_shared/paid.ts";
 import { verifiedOwner } from "../_shared/owners.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -131,7 +132,7 @@ async function authenticatedContext(req: Request) {
 async function currentSeasonAndAward(db: any, leagueId: string) {
   const { data: season } = await db.from("seasons").select("id,year,weekly_award_cents").eq("league_id", leagueId).eq("year", YEAR).single();
   if (!season) return { season: null, award: null };
-  const { data: award } = await db.from("weekly_awards").select("id,week,fantasy_team_id,fantasy_team_name,score,source_status,identified_at,source_observed_at,requires_commissioner_resolution").eq("season_id", season.id).order("week", { ascending: false }).limit(1).maybeSingle();
+  const { data: award } = await db.from("weekly_awards").select("id,week,fantasy_team_id,fantasy_team_name,score,award_basis,source_status,identified_at,source_observed_at,requires_commissioner_resolution").eq("season_id", season.id).order("week", { ascending: false }).limit(1).maybeSingle();
   return { season, award };
 }
 function verifiedLeg(event: any, leg: any, now = new Date()) {
@@ -179,10 +180,11 @@ async function validateLiveLegs(legs: any[], paidFetch: any) {
     if (!event || payload.success===false) throw new Error("event_unavailable");
     for (const leg of eventLegs) checked.push({...verifiedLeg(event,leg),observed_at:response.headers.get("x-provider-observed-at") || new Date().toISOString()});
   }
+  if (ticketConflict(checked)) throw new Error("conflicting_selections");
   return checked;
 }
 function weeklyError(error: any) {
-  const known = new Set(["invalid_submission","invalid_weekly_choice","season_not_found","approved_team_membership_required",
+  const known = new Set(["champion_full_wager_required","invalid_submission","invalid_weekly_choice","season_not_found","approved_team_membership_required",
     "submission_retry_conflict","weekly_winner_not_ready","not_this_weeks_high_scorer","stale_weekly_award",
     "weekly_submission_window_closed","weekly_decision_already_locked","weekly_ticket_already_submitted",
     "allocation_exceeded","invalid_legs","duplicate_selection","invalid_or_stale_selection"]);
@@ -288,7 +290,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
       ["ride","LET_IT_RIDE_100"].includes(body?.choice) ? "LET_IT_RIDE_100" : null;
     if (!choice) return json({error:"invalid_weekly_choice"},400);
     let legs;
-    try { legs=requestedLegs(body.legs); } catch(error) { return json({error:(error as Error).message},400); }
+    try { legs=requestedLegs(body.legs); if (ticketConflict(legs)) throw new Error("conflicting_selections"); } catch(error) { return json({error:(error as Error).message},400); }
     const {season} = await currentSeasonAndAward(db,league.id);
     if (!season) return json({error:"season_not_found"},409);
     const args = {p_actor:user.id,p_season:season.id,p_award:body.award_id,p_request:body.request_id,p_choice:choice,
@@ -300,7 +302,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     let checked;
     try { checked=await validateLiveLegs(legs,paidFetch); }
     catch(error) {
-      const known = ["selection_changed","selection_unavailable","event_already_started","event_mismatch","event_unavailable","invalid_line"];
+      const known = ["conflicting_selections","selection_changed","selection_unavailable","event_already_started","event_mismatch","event_unavailable","invalid_line"];
       const message = (error as Error).message;
       return json({error:known.includes(message)?message:"selection_provider_unavailable"},409);
     }

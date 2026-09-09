@@ -166,8 +166,9 @@ function renderMarkets() {
       <div class="market-options">
         ${event.selections.map((selection) => {
           const isSelected = state.legs.some((leg) => leg.id === selection.id);
+          const conflict = !isSelected && ticketConflict([...state.legs, {...selection,eventId:event.id}]);
           return `
-            <button class="market-option ${isSelected ? 'selected' : ''}" data-event="${event.id}" data-selection="${selection.id}">
+            <button class="market-option ${isSelected ? 'selected' : ''}" title="${conflict || ''}" ${conflict ? 'disabled' : ''} data-event="${event.id}" data-selection="${selection.id}">
               <span>${selection.market}</span>
               <strong>${selection.selection}</strong>
               <small>DK ${formatOdds(selection.odds)}</small>
@@ -187,6 +188,8 @@ function toggleLeg(eventId, selectionId) {
   } else {
     const event = sampleEvents.find((item) => item.id === eventId);
     const selection = event.selections.find((item) => item.id === selectionId);
+    const conflict = ticketConflict([...state.legs,{...selection,eventId:event.id}]);
+    if (conflict) return showToast(conflict);
     state.legs.push({ ...selection, eventId: event.id, eventName: event.name, sport: event.sport, time: event.time });
   }
   renderMarkets();

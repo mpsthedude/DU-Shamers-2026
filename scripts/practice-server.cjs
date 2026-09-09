@@ -3,7 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const assets = new Set(['app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
+const assets = new Set(['ticket-rules.js','app.js','standings.js','editions.js','weekly-tracker.js','live.js','props.js','analyzer.js','account-password.js','auth.js','styles.css','props.css','member.css','league-theme.css']);
 const server = http.createServer((req,res) => {
   const pathname = new URL(req.url,'http://localhost').pathname;
   res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'none'; frame-src 'none'; base-uri 'none'");

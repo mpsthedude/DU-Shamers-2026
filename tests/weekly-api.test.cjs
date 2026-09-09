@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const {stripTypeScriptTypes}=require('node:module');
 function harness() {
   let handler; let validations=0; const calls=[];
-  const ctx=vm.createContext({Request,Response,URL,URLSearchParams,AbortSignal,console,
+  const ctx=vm.createContext({ticketConflict:require('../ticket-rules.js').ticketConflict,Request,Response,URL,URLSearchParams,AbortSignal,console,
     paidHandler:fn=>req=>fn(req,async()=>{throw new Error('unexpected_provider_call');}),
     Deno:{env:{get:()=> 'fixture'},serve:fn=>handler=fn},createClient:()=>({})});
   const code=fs.readFileSync(path.join(__dirname,'../supabase/functions/member-api/index.ts'),'utf8').replace(/^import .*;\r?\n/gm,'');

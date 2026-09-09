@@ -141,6 +141,8 @@ function analyzerPayload() {
 }
 
 async function analyzeLiveTicket() {
+  const conflict = ticketConflict(state.legs);
+  if (conflict) return showToast(conflict);
   if (!state.legs.length) return showToast('Add at least one selection first.');
   if (!selectedStake()) return showToast('Choose the $50/$50 or Let It Ride option first.');
   if (state.legs.some((leg) => !(leg.providerEventId || leg.eventId) || !leg.providerOddId)) {

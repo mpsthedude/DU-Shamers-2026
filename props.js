@@ -164,9 +164,10 @@ function renderPropResults() {
           const leg = normalizePropLeg(event, prop);
           if (!leg) return '';
           const selected = state.legs.some((item) => item.id === leg.id);
+          const conflict = !selected && ticketConflict([...state.legs,{...leg,eventId:event.id}]);
           const lineText = prop.line !== null && prop.line !== undefined && prop.line !== '' ? ` ${prop.line}` : '';
           const sideText = prop.side ? cap(prop.side) : '';
-          return `<button class="prop-option ${selected ? 'selected' : ''}" data-prop-id="${encodeURIComponent(prop.odd_id)}">
+          return `<button class="prop-option ${selected ? 'selected' : ''}" title="${conflict || ''}" ${conflict ? 'disabled' : ''} data-prop-id="${encodeURIComponent(prop.odd_id)}">
             <span>${escapeProp(prettyStat(prop.stat_id))}</span>
             <strong>${escapeProp(sideText)}${escapeProp(lineText)}</strong>
             <small>DK ${formatOdds(leg.odds)}</small>
@@ -194,6 +195,8 @@ function togglePropLeg(event, prop) {
     state.legs.splice(existing, 1);
   } else {
     if (event.startsAt && Date.parse(event.startsAt) <= Date.now()) return showToast('This game has already started.');
+    const conflict = ticketConflict([...state.legs,{...leg,eventId:event.id}]);
+    if (conflict) return showToast(conflict);
     state.legs.push({ ...leg, eventId: event.id, eventName: event.name, sport: event.sport, time: event.time });
   }
   renderSlip();

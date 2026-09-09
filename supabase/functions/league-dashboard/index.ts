@@ -23,7 +23,7 @@ Deno.serve(async (req: Request) => {
   if (!season) return Response.json({ error: "season_not_found" }, { status: 404, headers: cors });
 
   const [awardsResult, betsResult, ledgerResult] = await Promise.all([
-    db.from("weekly_awards").select("week, fantasy_team_id, fantasy_team_name, score, source_status, requires_commissioner_resolution, identified_at").eq("season_id", season.id).order("week", { ascending: false }),
+    db.from("weekly_awards").select("week, fantasy_team_id, fantasy_team_name, score, award_basis, source_status, requires_commissioner_resolution, identified_at").eq("season_id", season.id).order("week", { ascending: false }),
     db.from("bets").select("id, category, sportsbook, description, market_label, stake_cents, placed_american_odds, potential_return_cents, status, placed_at, settled_at, settlement_return_cents, bet_legs(selection, market_name, sport)").eq("season_id", season.id).order("placed_at", { ascending: false }),
     db.from("ledger_transactions").select("account, transaction_type, amount_cents, description, occurred_at").eq("season_id", season.id).order("occurred_at", { ascending: false }),
   ]);

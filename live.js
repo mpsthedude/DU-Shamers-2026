@@ -48,7 +48,14 @@ function applyLiveAward(award) {
     return;
   }
 
-  if (label) label.textContent = `Week ${award.week} high scorer`;
+  if (award.award_basis === 'PREVIOUS_CHAMPION') {
+    if (label) label.textContent = 'Opening week · Previous season champion';
+    if (winnerName) winnerName.textContent = award.fantasy_team_name || 'David Belsky';
+    if (winnerScore) winnerScore.textContent = '$100 wager';
+    if (note) note.textContent = 'Champion’s opening selection: the full $100 goes on the ticket. No cash split.';
+    return;
+  }
+  if (label) label.textContent = `Week ${award.week} ticket · prior week high scorer`;
 
   if (award.source_status === 'WINNER_IDENTIFIED' && award.fantasy_team_name) {
     if (winnerName) winnerName.textContent = award.fantasy_team_name;
