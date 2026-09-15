@@ -80,18 +80,17 @@
 
       <article class="hero-card bank-card">
         <div class="section-label">LEAGUE BANK</div>
-        <div class="bank-total">
-          <span>Starting pool</span>
-          <strong>$3,600</strong>
+        <div class="bank-total"><span>Cash remaining · includes reserved prizes</span><strong id="poolCash">—</strong></div>
+        <p class="tiny-note">Recorded league funds, not a live bank-account balance.</p>
+        <div class="allocation-bars">
+          <div class="allocation-row"><span>Protected prize reserve</span><strong id="poolReserve">—</strong></div>
+          <div class="allocation-row"><span>Available for weekly bets</span><strong id="poolWeekly">—</strong></div>
+          <div class="allocation-row"><span>Unspent futures allocation</span><strong id="poolFutures">—</strong></div>
+          <div class="allocation-row"><span>Tied up in open bets</span><strong id="poolOpen">—</strong></div>
+          <div class="allocation-row"><span>Realized betting losses</span><strong id="poolLoss">—</strong></div>
         </div>
-        <div class="allocation-bars" aria-label="League bank allocations">
-          <div class="allocation-row"><span>Prize reserve</span><strong>$1,800</strong></div>
-          <div class="bar"><i style="width:50%"></i></div>
-          <div class="allocation-row"><span>Weekly program</span><strong>$1,400</strong></div>
-          <div class="bar"><i style="width:38.9%"></i></div>
-          <div class="allocation-row"><span>Futures</span><strong>$400</strong></div>
-          <div class="bar"><i style="width:11.1%"></i></div>
-        </div>
+        <p class="tiny-note" id="poolOriginal">Loading original pool…</p>
+        <section id="poolShame" aria-label="The Hall of Financial Shame"><h3>The Hall of Financial Shame</h3><div id="poolShameRows">Loading settled results…</div></section>
         <div class="bonus-bank">
           <div>
             <span>League Bonus Bank</span>

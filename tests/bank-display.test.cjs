@@ -61,3 +61,10 @@ test('an outage clears old financial and winner values and a later success recov
   assert.equal(get('#weeklyRemaining').textContent, '$1,400.00');
   assert.match(get('#bankDataStatus').innerHTML, /Live league bank/);
 });
+test('pool separates reserved cash, open stakes and settled losses and attributes only confirmed losses',()=>{
+ const {context,get}=harness();
+ context.renderPoolSummary({season:{starting_pool_cents:360000,prize_reserve_cents:180000,weekly_remaining_cents:130000,futures_remaining_cents:0},bonus_bank_cents:0,bets:[{status:'OPEN',stake_cents:40000},{status:'LOST',stake_cents:10000,settlement_return_cents:0}],weekly_tracker:{tickets:[{week:1,owner:'Cali Weed',status:'LOST',stake_cents:10000,settlement_return_cents:0},{week:2,owner:'Pending',status:'OPEN',stake_cents:10000}]}});
+ assert.equal(get('#poolCash').textContent,'$3,100.00');assert.equal(get('#poolOpen').textContent,'$400.00');assert.equal(get('#poolLoss').textContent,'$100.00');
+ assert.match(get('#poolShameRows').children[0].textContent,/Cali Weed · Lost \$100.00/);assert.equal(get('#poolShameRows').children.length,2);
+ context.renderPoolSummary(null);assert.equal(get('#poolCash').textContent,'—');assert.equal(get('#poolShameRows').children.length,1);
+});

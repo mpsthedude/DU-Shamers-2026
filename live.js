@@ -103,7 +103,27 @@ function applyLiveLedger(rows) {
   }
 }
 
+function renderPoolSummary(data) {
+  const s=data?.season;
+  const valid=s && ['prize_reserve_cents','weekly_remaining_cents','futures_remaining_cents','starting_pool_cents'].every(k=>Number.isInteger(s[k])) && Number.isInteger(data.bonus_bank_cents) && Array.isArray(data.bets);
+  const values=valid?{
+    poolCash:s.prize_reserve_cents+s.weekly_remaining_cents+s.futures_remaining_cents+data.bonus_bank_cents,
+    poolReserve:s.prize_reserve_cents,poolWeekly:s.weekly_remaining_cents,poolFutures:s.futures_remaining_cents,
+    poolOpen:data.bets.filter(b=>b.status==='OPEN').reduce((n,b)=>n+b.stake_cents,0),
+    poolLoss:data.bets.filter(b=>['WON','LOST','PUSHED','VOID'].includes(b.status) && Number.isInteger(b.settlement_return_cents)).reduce((n,b)=>n+Math.max(0,b.stake_cents-b.settlement_return_cents),0)
+  }:{};
+  for(const id of ['poolCash','poolReserve','poolWeekly','poolFutures','poolOpen','poolLoss']){const node=document.getElementById(id);if(node)node.textContent=Number.isInteger(values[id])?centsToMoney(values[id]):'—';}
+  const original=document.getElementById('poolOriginal');if(original)original.textContent=valid?`Original starting pool: ${centsToMoney(s.starting_pool_cents)}. Open stakes are already spent; potential payouts are not available cash. Losses shown before offsetting winnings.`:'Pool summary unavailable.';
+  const root=document.getElementById('poolShameRows');if(!root)return;root.replaceChildren();
+  const line=text=>{const p=document.createElement('p');p.textContent=text;root.append(p);};
+  if(!data?.weekly_tracker || !Array.isArray(data.weekly_tracker.tickets)){line('Settled owner results unavailable.');return;}
+  const losses=data.weekly_tracker.tickets.filter(t=>['WON','LOST','PUSHED','VOID'].includes(t.status) && Number.isInteger(t.settlement_return_cents) && t.settlement_return_cents<t.stake_cents);
+  if(!losses.length){line('No settled weekly losses. The shame ledger is clean—for now.');return;}
+  for(const t of losses){const loss=centsToMoney(t.stake_cents-t.settlement_return_cents);line(`Week ${t.week} · ${t.owner} · Lost ${loss} · Returned ${centsToMoney(t.settlement_return_cents)}`);line(t.owner==='Supreme Leader'?'A strategic contribution to sportsbook research. The leadership remains beyond reproach.':'The picks were bold. The contribution to the sportsbook was bolder.');}
+}
+
 function applyLiveStatus(data) {
+  renderPoolSummary(data);
   if (typeof renderFutures === 'function') renderFutures(data.bets, data.season);
   const dataBadge = document.querySelector('#bankDataStatus');
   if (dataBadge) {
@@ -140,6 +160,7 @@ async function loadLiveLeagueBank() {
   } catch (error) {
     if (typeof renderFutures === 'function') renderFutures(null);
     console.warn('Live league bank unavailable.', error);
+    renderPoolSummary(null);
     if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(null);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(null);
     if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(null);

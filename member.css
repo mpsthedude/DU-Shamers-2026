@@ -40,3 +40,6 @@
 #commissionerPush .button-row { display:flex; flex-wrap:wrap; gap:.5rem; }
 #commissionerPush button { width:auto; min-height:44px; }
 #commissionerPush button:disabled { opacity:.5; cursor:default; }
+#poolShame { margin-top:1rem; padding:1rem; border-left:4px solid #c8102e; background:#fff3f3; color:#242424; border-radius:6px; }
+#poolShame h3 { margin:0 0 .7rem; }
+#poolShame p { margin:.5rem 0; }
