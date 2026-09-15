@@ -1,7 +1,23 @@
 // Display-only snapshots. This module never calculates official settlement or calls a provider.
 function renderWeeklyTracker(snapshot) {
   const root=document.getElementById('weeklyTrackerBody');if(!root)return;
-  const placedTickets=(Array.isArray(snapshot?.tickets)?snapshot.tickets:[]).filter(ticket=>['OPEN','PLACED','WON','LOST','PUSHED','VOID'].includes(ticket.status));
+  const recap=document.getElementById('settledTicketRecap');
+  if(recap){
+    recap.replaceChildren();
+    const completed=(snapshot?.tickets||[]).filter(t=>['WON','LOST','PUSHED','VOID'].includes(t.status));
+    recap.classList.toggle('hidden',!completed.length);
+    if(completed.length){
+      const heading=document.createElement('h3');heading.textContent='Weekly bet recap';recap.append(heading);
+      for(const t of completed){
+        const row=document.createElement('p');
+        const cash=v=>Number.isInteger(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v/100):'—';
+        const net=Number.isInteger(t.settlement_return_cents)?t.settlement_return_cents-t.stake_cents:null;
+        row.textContent='Week '+t.week+' · '+t.owner+' · '+t.status+' · Returned '+cash(t.settlement_return_cents)+' · Net '+cash(net);
+        const picks=document.createElement('small');picks.textContent=(t.legs||[]).map(l=>l.selection).join(' + ');row.append(document.createElement('br'),picks);recap.append(row);
+      }
+    }
+  }
+  const placedTickets=(Array.isArray(snapshot?.tickets)?snapshot.tickets:[]).filter(ticket=>['OPEN','PLACED'].includes(ticket.status));
   document.getElementById('weeklyTracker')?.classList.toggle('hidden', !placedTickets.length);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=value=>Number.isInteger(value)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100):'—';
