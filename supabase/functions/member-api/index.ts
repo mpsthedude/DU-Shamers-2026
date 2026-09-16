@@ -115,7 +115,9 @@ async function authenticatedContext(req: Request) {
   if (userError || !user?.id || !user.email) return { error: json({ error: "member_sign_in_required" }, 401) } as any;
 
   await db.from("profiles").upsert({ id: user.id, display_name: user.user_metadata?.display_name || user.email.split("@")[0] }, { onConflict: "id", ignoreDuplicates: true });
-  const { data: league } = await db.from("leagues").select("id,name").eq("name", LEAGUE_NAME).single();
+  const {data:actorLeague,error:routeError}=await db.rpc('actor_league_name',{p_actor:user.id});
+  if(routeError)return {error:json({error:'league_not_found'},503)} as any;
+  const { data: league } = await db.from("leagues").select("id,name").eq("name", actorLeague).single();
   if (!league) return { error: json({ error: "league_not_found" }, 500) } as any;
   const owner=await verifiedOwner(db,user,league.id);
   if(owner.error) return {error:json({error:owner.error},403)} as any;
@@ -242,6 +244,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     }
     return json({
       signed_in: true,
+      test_mode: league.name==='DU Shamers Test',
       user: { id: user.id, email: user.email },
       membership,
       claim,

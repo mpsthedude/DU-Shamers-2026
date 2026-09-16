@@ -143,6 +143,8 @@ async function refreshMemberState({ refreshCommissioner = true } = {}) {
     else button.textContent = 'League Account';
   }
 
+  const testBanner=document.getElementById('builderTestBanner');
+  if(testBanner)testBanner.hidden=!memberSessionData?.test_mode;
   updateSubmissionAccess();
   if(typeof renderAnalysisAllowance==='function')renderAnalysisAllowance(memberSessionData?.analysis_usage,Boolean(authSession),Boolean(memberSessionData?.eligible_weekly_winner));
   if (refreshCommissioner && memberSessionData?.membership?.role === 'COMMISSIONER') await loadCommissionerConsole();

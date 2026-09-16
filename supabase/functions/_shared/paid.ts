@@ -24,7 +24,9 @@ export function paidHandler(handler: (req: Request, paidFetch: any) => Promise<R
         const client=database();
         const {data,error}=await client.auth.getUser(token);
         if (error || !data?.user?.email) return null;
-        const {data:league,error:leagueError}=await client.from("leagues").select("id").eq("name","DU Shamers").single();
+        const {data:actorLeague,error:routeError}=await client.rpc('actor_league_name',{p_actor:data.user.id});
+        if(routeError)return null;
+        const {data:league,error:leagueError}=await client.from("leagues").select("id").eq("name",actorLeague).single();
         if (leagueError || !league) return null;
         const {data:allowed,error:allowError}=await client.from("commissioner_allowlist").select("id").eq("league_id",league.id)
           .eq("email",data.user.email.toLowerCase()).maybeSingle();
