@@ -122,7 +122,7 @@ function renderChoice() {
   const stake = selectedStake();
   const badge = $('#stakeBadge');
   if (!stake) {
-    badge.textContent = 'Choose payout';
+    badge.textContent = 'Select your wager amount above';
     badge.classList.remove('ready');
   } else {
     badge.textContent = `${money(stake)} wager`;
@@ -225,7 +225,7 @@ function renderSlip() {
   const stake = selectedStake();
   $('#parlayOdds').textContent = state.legs.length === 1 ? formatOdds(state.legs[0].odds) : formatOdds(combinedAmerican);
   $('#impliedProbability').textContent = `${probability.toFixed(1)}%`;
-  $('#stakeAmount').textContent = stake ? money(stake) : 'Choose payout';
+  $('#stakeAmount').textContent = stake ? money(stake) : 'Not selected';
   $('#potentialReturn').textContent = stake ? money(stake * decimal) : '—';
 
   const eventIds = state.legs.map((leg) => leg.eventId);
