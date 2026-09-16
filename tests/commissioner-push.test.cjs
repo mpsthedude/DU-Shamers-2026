@@ -4,11 +4,12 @@ const fs=require('node:fs'),vm=require('node:vm');
 const {stripTypeScriptTypes}=require('node:module');
 const validation=stripTypeScriptTypes(fs.readFileSync('supabase/functions/commissioner-push/validation.ts','utf8')).replaceAll('export ','');
 const context={URL,atob};vm.createContext(context);vm.runInContext(validation,context);
-function workerHarness({status=201,allowed=true,pending=true,attempts=1}={}){
+function workerHarness({status=201,allowed=true,pending=true,attempts=1,testLeague=null}={}){
   let handler;const updates=[],deleted=[],requests=[],tasks=[];
   const rows={push_config:{public_key:'public',private_key:'private'},push_subscriptions:{id:'sub',profile_id:'actor',league_id:'league',endpoint:'https://web.push.apple.com/token',p256dh:'key',auth_key:'auth'},commissioner_allowlist:allowed?{id:'allow'}:null,league_members:{id:'member'},league_owner_directory:{id:'owner'},bet_proposals:{status:pending?'AWAITING_COMMISSIONER_PLACEMENT':'PLACED',category:'WEEKLY',proposed_stake_cents:10000,season_id:'season'},seasons:{league_id:'league'}};
+  if(testLeague){rows.seasons.league_id='test-league';rows.leagues=[{id:'test-league',name:testLeague},{id:'league',name:'DU Shamers'}];}
   const db={auth:{admin:{getUserById:async()=>({data:{user:{id:'actor',email:'owner@example.test',email_confirmed_at:'yes'}}})},getUser:async()=>({data:{user:null},error:true})},rpc:async()=>({data:[{id:'job',subscription_id:'sub',proposal_id:'proposal',attempts}]}),from:table=>{
-    const q={select(){return q;},eq(){return q;},maybeSingle:async()=>({data:rows[table]}),update(value){updates.push(value);return q;},delete(){deleted.push(table);return q;},then(resolve){resolve({error:null});}};return q;
+    const q={select(){return q;},in(){return q;},eq(){return q;},maybeSingle:async()=>({data:rows[table]}),update(value){updates.push(value);return q;},delete(){deleted.push(table);return q;},then(resolve){resolve({error:null,data:rows[table]});}};return q;
   }};
   const ctx=vm.createContext({Response,Request,URL,AbortSignal,console:{error(){}},createClient:()=>db,validEndpoint:context.validEndpoint,validKey:context.validKey,Deno:{env:{get:()=>''},serve:fn=>handler=fn},EdgeRuntime:{waitUntil:p=>tasks.push(p)},webpush:{generateRequestDetails:(sub,payload)=>{requests.push(JSON.parse(payload));return{endpoint:sub.endpoint,headers:{},body:'encrypted'};}},fetch:async(url,options)=>{assert.equal(options.redirect,'error');return new Response(null,{status});}});
   const source=fs.readFileSync('supabase/functions/commissioner-push/index.ts','utf8').replace(/^import .*;\r?\n/gm,'');
@@ -40,4 +41,9 @@ test('notification click ignores remote payload URLs and opens the commissioner 
   assert.equal(shown.tag,'ticket-id');assert.equal(shown.data.url,'/#commissioner');
   handlers.notificationclick({notification:{close(){}},waitUntil:p=>pending=p});await pending;
   assert.equal(opened,'https://dushamers.com/#commissioner');assert.equal(handlers.fetch,undefined);
+});
+
+test('cross-league alerts only accept explicitly labeled test league',async()=>{
+ const valid=workerHarness({testLeague:'DU Shamers Test'});await valid.run();assert.match(valid.requests[0].body,/TEST ONLY/);assert.match(valid.requests[0].body,/No real wager/);
+ const invalid=workerHarness({testLeague:'Other league'});await invalid.run();assert.equal(invalid.requests.length,0);assert.equal(invalid.updates[0].state,'SKIPPED');
 });

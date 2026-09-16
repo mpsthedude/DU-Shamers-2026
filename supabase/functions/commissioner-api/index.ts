@@ -61,7 +61,15 @@ async function claimResult(db: any, args: Record<string, unknown>) {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const ctx: any = await context(req); if (ctx.error) return ctx.error;
-  const { db, user, league, commissioner, season } = ctx;
+  let { db, user, league, commissioner, season } = ctx;
+  const testMode = new URL(req.url).searchParams.get('scope') === 'test';
+  if (testMode) {
+    const {data:testLeague}=await db.from('leagues').select('id,name').eq('name','DU Shamers Test').single();
+    if(!testLeague)return json({error:'test_league_unavailable'},503);
+    const {data:testSeason}=await db.from('seasons').select('id').eq('league_id',testLeague.id).eq('year',YEAR).single();
+    if(!testSeason)return json({error:'test_league_unavailable'},503);
+    league=testLeague;season=testSeason;
+  }
 
   if (req.method === "GET") {
     const [claimsResult, proposalsResult, betsResult, ownersResult] = await Promise.all([
@@ -95,6 +103,7 @@ Deno.serve(async (req: Request) => {
     ]);
     if(editionsResult.error || sourceResult.error) return json({error:"edition_read_failed"},500);
     return json({
+      test_mode:testMode,
       owners:ownersResult.data||[],
       invitations_enabled:Deno.env.get("AUTH_INVITATIONS_ENABLED")==="true",
       editions:editionsResult.data||[],
@@ -113,6 +122,7 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const body = await req.json().catch(() => ({})); const action = body?.action;
+  if(testMode && !['confirm_placement','settle_bet','reject_proposal'].includes(action))return json({error:'test_action_not_allowed'},403);
 
   if(action==='refresh_usage'){
     const {data:started,error}=await db.rpc('begin_usage_check');

@@ -34,8 +34,14 @@ async function dispatch() {
       if(job.proposal_id){
         const {data:p}=await db.from('bet_proposals').select('status,category,proposed_stake_cents,first_event_start_at,hard_deadline_at,season_id').eq('id',job.proposal_id).maybeSingle();
         const {data:season}=p?await db.from('seasons').select('league_id').eq('id',p.season_id).maybeSingle():{data:null};
-        if(!p || season?.league_id!==sub.league_id || p.category!=='WEEKLY' || p.status!=='AWAITING_COMMISSIONER_PLACEMENT' || [p.first_event_start_at,p.hard_deadline_at].some(t=>t && Date.parse(t)<=Date.now())){await finish('SKIPPED','ticket_no_longer_pending');continue;}
-        body=`A $${(p.proposed_stake_cents/100).toFixed(0)} weekly ticket is ready for your review.`;
+        let testTicket=false;
+        if(season && season.league_id!==sub.league_id){
+          const {data:leagues}=await db.from('leagues').select('id,name').in('id',[season.league_id,sub.league_id]);
+          const {data:testMember}=await db.from('league_members').select('id').eq('league_id',season.league_id).eq('profile_id',sub.profile_id).eq('role','COMMISSIONER').maybeSingle();
+          testTicket=!!testMember && leagues?.find((l:any)=>l.id===season.league_id)?.name==='DU Shamers Test' && leagues?.find((l:any)=>l.id===sub.league_id)?.name==='DU Shamers';
+        }
+        if(!p || (season?.league_id!==sub.league_id && !testTicket) || p.category!=='WEEKLY' || p.status!=='AWAITING_COMMISSIONER_PLACEMENT' || [p.first_event_start_at,p.hard_deadline_at].some(t=>t && Date.parse(t)<=Date.now())){await finish('SKIPPED','ticket_no_longer_pending');continue;}
+        body=testTicket ? `TEST ONLY: A simulated $${(p.proposed_stake_cents/100).toFixed(0)} ticket is ready in Test Tickets. No real wager.` : `A $${(p.proposed_stake_cents/100).toFixed(0)} weekly ticket is ready for your review.`;
       }
       const tag=job.proposal_id || job.id;
       const request=webpush.generateRequestDetails({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth_key}},JSON.stringify({body,tag}),{vapidDetails:{subject:'mailto:sloopstone@gmail.com',publicKey:keys.public_key,privateKey:keys.private_key},TTL:3600,urgency:'high',topic:tag.replace(/-/g,'')});

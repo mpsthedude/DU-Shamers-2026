@@ -16,6 +16,7 @@ const authClient = window.supabase.createClient(AUTH_SUPABASE_URL, LIVE_PUBLISHA
 let authSession = null;
 let memberSessionData = null;
 let commissionerData = null;
+let commissionerTestData = null;
 let pendingWeeklySubmission = null;
 
 function authHeaders() {
@@ -108,9 +109,9 @@ async function memberRequest(method = 'GET', body = null) {
   return data;
 }
 
-async function commissionerRequest(method = 'GET', body = null) {
+async function commissionerRequest(method = 'GET', body = null, testMode = false) {
   if (!authSession?.access_token) throw new Error('commissioner_sign_in_required');
-  const response = await fetch(COMMISSIONER_API_URL, {
+  const response = await fetch(COMMISSIONER_API_URL + (testMode ? '?scope=test' : ''), {
     method,
     headers: { ...authHeaders(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
@@ -350,6 +351,8 @@ async function loadCommissionerConsole() {
   if (!panel) return;
   try {
     commissionerData = await commissionerRequest('GET');
+    try { commissionerTestData = await commissionerRequest('GET', null, true); }
+    catch { commissionerTestData = null; }
     panel.classList.remove('hidden');
     renderCommissionerConsole();
   } catch (error) {
@@ -408,6 +411,17 @@ function ownerInvitationMarkup(){
     </article>`).join('');
 }
 
+function testTicketsMarkup() {
+  if (!commissionerTestData) return '<article class="commissioner-persistent-item"><h3>Test Tickets</h3><p>Test queue unavailable. Refresh to retry.</p></article>';
+  const pending=(commissionerTestData.proposals||[]).filter(p=>p.status==='AWAITING_COMMISSIONER_PLACEMENT');
+  const bets=commissionerTestData.bets||[];
+  return `<section class="commissioner-persistent-item" id="testTickets"><h3>Test Tickets · ${pending.length} awaiting simulated placement</h3>
+    <p>Yahoo test account only. These controls simulate placement and settlement. They do not place DraftKings bets or change the real league balance.</p>
+    ${pending.map(p=>`<article class="commissioner-persistent-item"><h4>${escapeMemberText(p.submitter?.fantasy_team_name||'Test owner')} · ${commissionerMoney(p.proposed_stake_cents)}</h4><p>Submitted ${escapeMemberText(new Date(p.submitted_at||p.created_at).toLocaleString())}</p><ul>${(p.legs||[]).map(l=>`<li>${escapeMemberText(l.selection)}</li>`).join('')}</ul><label>Simulated combined odds <input class="commissioner-input" id="testOdds-${p.id}" placeholder="e.g. +300"></label><button class="commissioner-action" data-test-place="${p.id}">Simulate placement</button></article>`).join('')}
+    ${bets.map(b=>`<article class="commissioner-persistent-item"><h4>TEST · ${commissionerMoney(b.stake_cents)} · ${escapeMemberText(b.status)}</h4><p>Simulated odds ${formatOdds(b.placed_american_odds)} · potential return ${commissionerMoney(b.potential_return_cents)}</p>${b.status==='OPEN'?`<button class="commissioner-action" data-test-settle="${b.id}" data-status="WON" data-return="${b.potential_return_cents}">Simulate win</button> <button class="commissioner-action" data-test-settle="${b.id}" data-status="LOST" data-return="0">Simulate loss</button>`:`<p>Simulated return ${commissionerMoney(b.settlement_return_cents)}</p>`}</article>`).join('')}
+    ${!pending.length&&!bets.length?'<p>No test tickets yet.</p>':''}</section>`;
+}
+
 function renderCommissionerConsole() {
   const panel = document.querySelector('#commissioner');
   const queue = document.querySelector('#commissionerQueue');
@@ -446,7 +460,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + providerBudgetMarkup() + html;
+  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-queue>Refresh ticket queues</button><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + testTicketsMarkup() + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + providerBudgetMarkup() + html;
   bindCommissionerActions();
   if(typeof renderCommissionerPush==='function')renderCommissionerPush();
 }
@@ -469,6 +483,17 @@ function bindCommissionerActions() {
       }
     }));
   }
+  bind('[data-refresh-queue]',async()=>{});
+  bind('[data-test-place]', async button => {
+    const id=button.dataset.testPlace, odds=document.getElementById('testOdds-'+id).value.trim();
+    if(!odds){showToast('Enter simulated combined odds first.');return false;}
+    await commissionerRequest('POST',{action:'confirm_placement',proposal_id:id,placed_american_odds:odds,sportsbook_ticket_ref:'TEST — simulated only'},true);
+    showToast('Simulated placement recorded. No real funds used.');
+  });
+  bind('[data-test-settle]',async button=>{
+    await commissionerRequest('POST',{action:'settle_bet',bet_id:button.dataset.testSettle,status:button.dataset.status,settlement_return_cents:Number(button.dataset.return)},true);
+    showToast('Test ticket settled. Real league funds unchanged.');
+  });
   bind('[data-refresh-usage]',async()=>{await commissionerRequest('POST',{action:'refresh_usage'});showToast('Provider usage updated.');});
   bind('[data-save-object-limit]',async()=>{
     const value=document.getElementById('objectLimit').value;
