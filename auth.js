@@ -259,6 +259,29 @@ function updateSubmissionAccess() {
   else button.textContent = 'Submit to commissioner';
 }
 
+function applyTicketUpdates(updated) {
+  if (!Array.isArray(updated) || updated.length !== state.legs.length) return false;
+  const replacements = state.legs.map(leg => updated.find(item =>
+    item.event_id === (leg.providerEventId || leg.eventId) && item.odd_id === leg.providerOddId));
+  if (replacements.some(item => !item || !Number.isFinite(item.american_odds))) return false;
+  const changes = [];
+  state.legs = state.legs.map((leg, index) => {
+    const item = replacements[index];
+    if (leg.odds !== item.american_odds || (leg.line ?? null) !== item.line_value) {
+      changes.push(`${leg.selection} (${formatOdds(leg.odds)}) → ${item.selection} (${formatOdds(item.american_odds)})`);
+    }
+    return {...leg, odds:item.american_odds, line:item.line_value, selection:item.selection};
+  });
+  pendingWeeklySubmission = null;
+  persist();
+  renderSlip();
+  const notice = document.querySelector('#ticketUpdateNotice');
+  notice.hidden = false;
+  notice.innerHTML = '<strong>DraftKings updated your ticket. Not submitted yet.</strong><p>Your picks and wager amount have been kept. Review the changes and estimated return, then submit again.</p><ul>' + changes.map(change => `<li>${escapeMemberText(change)}</li>`).join('') + '</ul>';
+  notice.scrollIntoView({behavior:'smooth', block:'center'});
+  return true;
+}
+
 async function submitPersistentTicket() {
   const conflict = ticketConflict(state.legs);
   if (conflict) return showToast(conflict);
@@ -305,12 +328,14 @@ async function submitPersistentTicket() {
   try {
     const result = await memberRequest('POST', payload);
     pendingWeeklySubmission = null;
+    document.querySelector('#ticketUpdateNotice').hidden = true;
     showToast('Ticket submitted to the commissioner.');
     await refreshMemberState();
     if (result?.proposal?.id) document.querySelector('#commissioner')?.scrollIntoView({ behavior: 'smooth' });
   } catch (error) {
     console.warn('Persistent ticket submission failed', error);
-    showToast(memberErrorText(error.message));
+    const updated = error.message === 'selection_changed' && applyTicketUpdates(error.data?.updated_legs);
+    showToast(updated ? 'Ticket updated. Review the changes and submit again.' : memberErrorText(error.message));
     button.disabled = false;
     button.textContent = original;
   }

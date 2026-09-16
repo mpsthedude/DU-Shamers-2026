@@ -137,7 +137,7 @@ async function currentSeasonAndAward(db: any, leagueId: string) {
   const { data: award } = await db.from("weekly_awards").select("id,week,fantasy_team_id,fantasy_team_name,score,award_basis,source_status,identified_at,source_observed_at,requires_commissioner_resolution").eq("season_id", season.id).order("week", { ascending: false }).limit(1).maybeSingle();
   return { season, award };
 }
-function verifiedLeg(event: any, leg: any, now = new Date()) {
+function verifiedLeg(event: any, leg: any, now = new Date(), allowChanges = false) {
   if (event?.eventID !== leg.event_id || event?.leagueID !== leg.sport) throw new Error("event_mismatch");
   const startsAt = new Date(event?.status?.startsAt);
   if (!Number.isFinite(startsAt.getTime()) || startsAt<=now || event.status?.started === true
@@ -149,7 +149,7 @@ function verifiedLeg(event: any, leg: any, now = new Date()) {
     || odd.periodID !== "game" || !["ml","sp","ou","yn"].includes(odd.betTypeID)) throw new Error("selection_unavailable");
   const line = numericLine(odd.betTypeID === "sp" ? book.spread : odd.betTypeID === "ou" ? book.overUnder : null);
   if ((["sp","ou"].includes(odd.betTypeID) && line===null)) throw new Error("selection_unavailable");
-  if (odds !== leg.odds || line !== leg.line) throw new Error("selection_changed");
+  if (!allowChanges && (odds !== leg.odds || line !== leg.line)) throw new Error("selection_changed");
   const name = (team: any) => team?.names?.long || team?.names?.medium || team?.name || team?.teamID;
   const home = name(event.teams?.home), away = name(event.teams?.away);
   if (!home || !away) throw new Error("selection_unavailable");
@@ -180,8 +180,12 @@ async function validateLiveLegs(legs: any[], paidFetch: any) {
     const payload = await response.json();
     const event = Array.isArray(payload?.data) ? payload.data.find((e:any)=>e.eventID===eventId) : null;
     if (!event || payload.success===false) throw new Error("event_unavailable");
-    for (const leg of eventLegs) checked.push({...verifiedLeg(event,leg),observed_at:response.headers.get("x-provider-observed-at") || new Date().toISOString()});
+    for (const leg of eventLegs) checked.push({...verifiedLeg(event,leg,new Date(),true),observed_at:response.headers.get("x-provider-observed-at") || new Date().toISOString()});
   }
+  if (checked.some(current => {
+    const original = legs.find(leg => leg.event_id === current.event_id && leg.odd_id === current.odd_id);
+    return original.odds !== current.american_odds || original.line !== current.line_value;
+  })) throw Object.assign(new Error("selection_changed"), { updated_legs: checked });
   if (ticketConflict(checked)) throw new Error("conflicting_selections");
   return checked;
 }
@@ -307,7 +311,8 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     catch(error) {
       const known = ["conflicting_selections","selection_changed","selection_unavailable","event_already_started","event_mismatch","event_unavailable","invalid_line"];
       const message = (error as Error).message;
-      return json({error:known.includes(message)?message:"selection_provider_unavailable"},409);
+      return json({error:known.includes(message)?message:"selection_provider_unavailable",
+        ...(message === "selection_changed" ? {updated_legs:(error as any).updated_legs} : {})},409);
     }
     const result = await db.rpc("submit_weekly_ticket",{...args,p_legs:checked});
     if (result.error) return weeklyError(result.error);

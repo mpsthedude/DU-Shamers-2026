@@ -15,7 +15,7 @@ function harness() {
   ctx.authenticatedContext=async()=>({db,user:{id:'actor'},league:{id:'league'},membership:{id:'member',fantasy_team_id:'1'}});
   ctx.currentSeasonAndAward=async()=>({season:{id:'season'}});
   ctx.validateLiveLegs=async()=>{validations++;return [];};
-  return {ctx,calls,get validations(){return validations;},post:body=>handler(new Request('https://example.invalid',{
+  return {ctx,db,calls,get validations(){return validations;},post:body=>handler(new Request('https://example.invalid',{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}))};
 }
 const leg={event_id:'event',odd_id:'points-home-game-sp-home',sport:'NFL',odds:-110,line:-3.5};
@@ -81,4 +81,24 @@ test('saved submission retries return before any fresh provider validation',asyn
   assert.equal(h.calls[0].args.p_actor,'actor');
   assert.equal((await h.post({...body,legs:Array(13).fill(leg)})).status,400);
   assert.equal(h.calls.length,1);
+});
+
+test('changed ticket returns review data without saving a proposal',async()=>{
+  const h=harness();
+  h.db.rpc=async(name,args)=>{h.calls.push({name,args});return {data:{validation_required:true}};};
+  h.ctx.validateLiveLegs=async()=>{throw Object.assign(new Error('selection_changed'),{updated_legs:[{event_id:'event',odd_id:leg.odd_id,american_odds:-115,line_value:-4.5}]});};
+  const response=await h.post({action:'submit_weekly_bet',choice:'split',award_id:'11111111-1111-4111-8111-111111111111',request_id:'22222222-2222-4222-8222-222222222222',legs:[leg]});
+  assert.equal(response.status,409);
+  assert.equal((await response.json()).updated_legs[0].line_value,-4.5);
+  assert.equal(h.calls.length,1);
+});
+
+test('reviewable changes still reject unavailable or started selections',()=>{
+ const {ctx}=harness(), now=new Date('2026-09-15T14:00:00Z'), e=event();
+ e.odds[leg.odd_id].byBookmaker.draftkings.spread='-4.5';
+ assert.equal(ctx.verifiedLeg(e,leg,now,true).line_value,-4.5);
+ e.odds[leg.odd_id].byBookmaker.draftkings.available=false;
+ assert.throws(()=>ctx.verifiedLeg(e,leg,now,true),/selection_unavailable/);
+ e.status.started=true;
+ assert.throws(()=>ctx.verifiedLeg(e,leg,now,true),/event_already_started/);
 });
