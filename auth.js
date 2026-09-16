@@ -407,7 +407,9 @@ function ownerInvitationMarkup(){
     '</p>'+owners.map(owner=>`<article class="commissioner-persistent-item">
       <h3>${escapeMemberText(owner.manager_name)} · ESPN team ${escapeMemberText(owner.fantasy_team_id)}</h3>
       <p>${escapeMemberText(owner.email)} · ${escapeMemberText(owner.invite_status)}</p>
-      <button class="commissioner-action" data-invite-owner="${escapeMemberText(owner.id)}" ${!enabled||!['NOT_SENT','FAILED'].includes(owner.invite_status)?'disabled':''}>Send invitation</button>
+      <p><strong>Account: ${escapeMemberText(({REGISTERED:'Registered — email verified',PENDING:'Not registered yet — activation pending',NOT_REGISTERED:'Not registered',UNKNOWN:'Status unavailable'})[owner.registration_status]||'Status unavailable')}</strong></p>
+      ${owner.last_sign_in_at?`<p>Last sign-in: ${escapeMemberText(new Date(owner.last_sign_in_at).toLocaleString())}</p>`:owner.registration_status==='REGISTERED'?'<p>No sign-in recorded yet.</p>':''}
+      <button class="commissioner-action" data-invite-owner="${escapeMemberText(owner.id)}" ${!enabled||owner.registration_status==='REGISTERED'||!['NOT_SENT','FAILED'].includes(owner.invite_status)?'disabled':''}>Send invitation</button>
     </article>`).join('');
 }
 

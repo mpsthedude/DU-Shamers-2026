@@ -39,6 +39,28 @@ async function context(req: Request) {
   if (!season) return { error: json({ error: "season_not_found" }, 500) } as any;
   return { db, user, league, commissioner, season };
 }
+async function ownerRegistrationStatus(db: any, owners: any[]) {
+  const users = new Map<string, any>();
+  try {
+    for(let page=1;;page++) {
+      const {data,error}=await db.auth.admin.listUsers({page,perPage:1000});
+      if(error || !Array.isArray(data?.users))throw new Error('auth_status_unavailable');
+      for(const user of data.users) {
+        const email=String(user.email||'').toLowerCase();
+        if(owners.some(owner=>owner.email.toLowerCase()===email)) users.set(email,user);
+      }
+      if(data.users.length<1000)break;
+    }
+    return owners.map(owner=>{
+      const user=users.get(owner.email.toLowerCase());
+      return {...owner,registration_status:user?.email_confirmed_at?'REGISTERED':user?'PENDING':'NOT_REGISTERED',
+        email_verified_at:user?.email_confirmed_at||null,last_sign_in_at:user?.last_sign_in_at||null};
+    });
+  } catch {
+    return owners.map(owner=>({...owner,registration_status:'UNKNOWN'}));
+  }
+}
+
 async function namesByProfile(db: any, ids: string[]) {
   if (!ids.length) return new Map<string,string>();
   const { data } = await db.from("profiles").select("id,display_name").in("id", [...new Set(ids)]);
@@ -104,7 +126,7 @@ Deno.serve(async (req: Request) => {
     if(editionsResult.error || sourceResult.error) return json({error:"edition_read_failed"},500);
     return json({
       test_mode:testMode,
-      owners:ownersResult.data||[],
+      owners:await ownerRegistrationStatus(db,ownersResult.data||[]),
       invitations_enabled:Deno.env.get("AUTH_INVITATIONS_ENABLED")==="true",
       editions:editionsResult.data||[],
       edition_weeks:(sourceResult.data?.payload?.completed_weeks||[]).map((w:any)=>w.week).filter((w:number)=>w>=1&&w<=18),
