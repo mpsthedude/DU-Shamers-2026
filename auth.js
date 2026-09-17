@@ -413,6 +413,15 @@ function ownerInvitationMarkup(){
     </article>`).join('');
 }
 
+function commissionerLegMarkup(leg) {
+  const time = value => value && Number.isFinite(Date.parse(value))
+    ? escapeMemberText(new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})) : 'Unavailable';
+  return `<li><strong>${escapeMemberText(leg.event_name || 'Matchup unavailable')}</strong>
+    <div>${escapeMemberText(leg.sport || '')} · Starts ${time(leg.event_start_at)}</div>
+    <div>${escapeMemberText(leg.selection)} · ${leg.american_odds == null ? 'Odds unavailable' : formatOdds(leg.american_odds)}</div>
+    <small>DraftKings odds at submission · checked ${time(leg.observed_at)}. Confirm current odds before placement.</small></li>`;
+}
+
 function testTicketsMarkup() {
   if (!commissionerTestData) return '<article class="commissioner-persistent-item"><h3>Test Tickets</h3><p>Test queue unavailable. Refresh to retry.</p></article>';
   const pending=(commissionerTestData.proposals||[]).filter(p=>p.status==='AWAITING_COMMISSIONER_PLACEMENT');
@@ -446,8 +455,8 @@ function renderCommissionerConsole() {
     html += '<div class="commissioner-section-title">Awaiting DraftKings placement</div>' + pendingProposals.map((proposal) => `
       <article class="commissioner-persistent-item">
         <h3>${escapeMemberText(proposal.submitter?.fantasy_team_name || proposal.submitter?.display_name || 'Weekly winner')} · ${commissionerMoney(proposal.proposed_stake_cents)}</h3>
-        <p>${proposal.legs?.length || 0}-leg ticket · submitted ${proposal.submitted_at ? new Date(proposal.submitted_at).toLocaleString() : '—'} · estimated ${proposal.estimated_american_odds ? formatOdds(proposal.estimated_american_odds) : 'price unavailable'}</p>
-        <ul class="commissioner-leg-list">${(proposal.legs || []).map((leg) => `<li>${escapeMemberText(leg.selection)} · ${formatOdds(leg.american_odds)}</li>`).join('')}</ul>
+        <p>${proposal.legs?.length || 0}-leg ticket · submitted ${proposal.submitted_at ? new Date(proposal.submitted_at).toLocaleString() : '—'} · ${proposal.legs?.length===1 && proposal.legs[0].american_odds != null ? 'submitted odds '+formatOdds(proposal.legs[0].american_odds) : proposal.estimated_american_odds ? 'estimated '+formatOdds(proposal.estimated_american_odds) : 'combined price unavailable'}</p>
+        <ul class="commissioner-leg-list">${(proposal.legs || []).map(commissionerLegMarkup).join('')}</ul>
         ${new Set((proposal.legs || []).map(leg=>leg.event_id)).size < (proposal.legs || []).length ? '<p class="warning">Same-game ticket: the estimate does not account for related outcomes. Verify the exact combination in DraftKings and enter its actual combined odds below. Reject the ticket if DraftKings does not accept the combination.</p>' : ''}
         <div class="placement-form">
           <input class="commissioner-input" id="actualOdds-${proposal.id}" placeholder="Actual DK odds, e.g. +625" />
