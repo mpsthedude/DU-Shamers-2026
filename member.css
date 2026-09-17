@@ -28,6 +28,12 @@
 .commissioner-action { color:var(--text); background:#14231a; border:1px solid #34503c; padding:.52rem .7rem; font-size:.73rem; }
 .commissioner-action.danger { color:#ffb3b3; border-color:rgba(255,116,116,.35); background:rgba(255,116,116,.06); }
 .placement-form { display:grid; grid-template-columns:1fr 1.4fr auto; gap:.45rem; margin-top:.65rem; }
+.ticket-placement-form { grid-template-columns:minmax(0,1fr); gap:.85rem; }
+.ticket-placement-form label { display:grid; gap:.35rem; min-width:0; }
+.ticket-placement-form input { min-width:0; box-sizing:border-box; }
+.ticket-placement-form small { line-height:1.5; }
+.ticket-placement-form > p { margin:0; }
+.ticket-placement-form > button { justify-self:start; }
 .commissioner-leg-list { margin:.5rem 0 0; padding-left:1.1rem; color:#cbd7cf; font-size:.72rem; }
 .commissioner-leg-list li { margin:.22rem 0; }
 .auth-help { color:#72877a; font-size:.7rem; line-height:1.5; margin-top:.7rem; }

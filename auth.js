@@ -458,10 +458,18 @@ function renderCommissionerConsole() {
         <p>${proposal.legs?.length || 0}-leg ticket · submitted ${proposal.submitted_at ? new Date(proposal.submitted_at).toLocaleString() : '—'} · ${proposal.legs?.length===1 && proposal.legs[0].american_odds != null ? 'submitted odds '+formatOdds(proposal.legs[0].american_odds) : proposal.estimated_american_odds ? 'estimated '+formatOdds(proposal.estimated_american_odds) : 'combined price unavailable'}</p>
         <ul class="commissioner-leg-list">${(proposal.legs || []).map(commissionerLegMarkup).join('')}</ul>
         ${new Set((proposal.legs || []).map(leg=>leg.event_id)).size < (proposal.legs || []).length ? '<p class="warning">Same-game ticket: the estimate does not account for related outcomes. Verify the exact combination in DraftKings and enter its actual combined odds below. Reject the ticket if DraftKings does not accept the combination.</p>' : ''}
-        <div class="placement-form">
-          <input class="commissioner-input" id="actualOdds-${proposal.id}" placeholder="Actual DK odds, e.g. +625" />
-          <input class="commissioner-input" id="ticketRef-${proposal.id}" placeholder="DK ticket/reference (optional)" />
+        <div class="placement-form ticket-placement-form">
+          <p><strong>Wager amount: ${commissionerMoney(proposal.proposed_stake_cents)}</strong><br>This is the stake requested by the bettor.</p>
+          <label for="actualOdds-${proposal.id}"><strong>Actual DraftKings odds (required)</strong>
+            <input class="commissioner-input" id="actualOdds-${proposal.id}" placeholder="Example: -108 or +300" aria-describedby="oddsHelp-${proposal.id}" />
+            <small id="oddsHelp-${proposal.id}">Enter the American odds from your placed bet receipt. For a parlay, use its combined odds.</small>
+          </label>
+          <label for="ticketRef-${proposal.id}"><strong>DraftKings bet ID (optional)</strong>
+            <input class="commissioner-input" id="ticketRef-${proposal.id}" placeholder="Example: DK123456789" />
+            <small>Copy the ticket/reference number from the receipt, or leave blank.</small>
+          </label>
           <button class="commissioner-action primary" data-place-proposal="${proposal.id}">Record placement</button>
+          <small>Record only after placing the ${commissionerMoney(proposal.proposed_stake_cents)} wager in DraftKings.</small>
         </div>
         <div class="commissioner-actions"><button class="commissioner-action danger" data-reject-proposal="${proposal.id}">Reject ticket</button></div>
       </article>`).join('');
