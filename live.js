@@ -126,12 +126,21 @@ function renderPoolSummary(data) {
   }:{};
   for(const id of ['poolCash','poolReserve','poolWeekly','poolFutures','poolOpen','poolLoss']){const node=document.getElementById(id);if(node)node.textContent=Number.isInteger(values[id])?centsToMoney(values[id]):'—';}
   const original=document.getElementById('poolOriginal');if(original)original.textContent=valid?`Original starting pool: ${centsToMoney(s.starting_pool_cents)}. Open stakes are already spent; potential payouts are not available cash. Losses shown before offsetting winnings.`:'Pool summary unavailable.';
-  const root=document.getElementById('poolShameRows');if(!root)return;root.replaceChildren();
+  const root=document.getElementById('weeklyBettingRows');if(!root)return;root.replaceChildren();
   const line=text=>{const p=document.createElement('p');p.textContent=text;root.append(p);};
-  if(!data?.weekly_tracker || !Array.isArray(data.weekly_tracker.tickets)){line('Settled owner results unavailable.');return;}
-  const losses=data.weekly_tracker.tickets.filter(t=>['WON','LOST','PUSHED','VOID'].includes(t.status) && Number.isInteger(t.settlement_return_cents) && t.settlement_return_cents<t.stake_cents);
-  if(!losses.length){line('No settled weekly losses. The shame ledger is clean—for now.');return;}
-  for(const t of losses){const loss=centsToMoney(t.stake_cents-t.settlement_return_cents);line(`Week ${t.week} · ${t.owner} · Lost ${loss} · Returned ${centsToMoney(t.settlement_return_cents)}`);line(t.owner==='Supreme Leader'?'A strategic contribution to sportsbook research. The leadership remains beyond reproach.':'The picks were bold. The contribution to the sportsbook was bolder.');}
+  if(!Array.isArray(data?.weekly_results)){line('Betting results temporarily unavailable.');return;}
+  if(!data.weekly_results.length){line('No weekly tickets submitted yet.');return;}
+  for(const t of data.weekly_results){
+    const card=document.createElement('article');card.className='weekly-result';
+    const heading=document.createElement('h4');heading.textContent=`Week ${t.week??'—'} · ${t.owner}`;card.append(heading);
+    for(const pick of t.picks||[]){const p=document.createElement('p');p.textContent=`${pick.event_name} · ${pick.selection}`;card.append(p);}
+    const settled=['WON','LOST','PUSHED','VOID'].includes(t.status)&&Number.isInteger(t.settlement_return_cents);
+    const net=settled?t.settlement_return_cents-t.stake_cents:null;
+    const amount=n=>Number.isInteger(n)?centsToMoney(n):'—';
+    const values=[['Cash taken',amount(t.cash_payout_cents)],['Wager',amount(t.stake_cents)],['Result',({PENDING:'Pending placement',OPEN:'Pending result',WON:'Won',LOST:'Lost',PUSHED:'Push',VOID:'Void'})[t.status]||t.status],['Actual return',settled?amount(t.settlement_return_cents):'—'],['Net betting profit/loss',net===null?'—':`${net>0?'+':net<0?'−':''}${amount(Math.abs(net))}`]];
+    const list=document.createElement('dl');list.className='weekly-result-values';
+    for(const [label,value] of values){const group=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;group.append(dt);group.append(dd);list.append(group);}card.append(list);root.append(card);
+  }
 }
 
 function applyLiveStatus(data) {

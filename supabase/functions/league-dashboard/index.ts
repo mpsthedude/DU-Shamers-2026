@@ -49,6 +49,14 @@ Deno.serve(async (req: Request) => {
     earnings:earningsResult.error?null:earningsResult.data,
   };
   const trackerResult=await db.rpc('tracker_ticket_data',{p_season:season.id});
+  const resultsQuery=await db.from('bet_proposals').select('id,status,proposed_stake_cents,submitted_at,weekly_decisions(cash_payout_cents,weekly_awards(week,fantasy_team_name)),bet_proposal_legs(event_name,selection,sort_order),bets(status,stake_cents,settlement_return_cents)').eq('season_id',season.id).eq('category','WEEKLY').in('status',['SUBMITTED','AWAITING_COMMISSIONER_PLACEMENT','PLACED']).order('submitted_at',{ascending:false});
+  const weeklyResults=resultsQuery.error?null:(resultsQuery.data||[]).map((p:any)=>{
+    const bet=Array.isArray(p.bets)?p.bets[0]:p.bets,decision=p.weekly_decisions,award=decision?.weekly_awards;
+    return {week:award?.week,owner:award?.fantasy_team_name||'Weekly bettor',
+      cash_payout_cents:decision?.cash_payout_cents??null,stake_cents:bet?.stake_cents??p.proposed_stake_cents,
+      status:bet?.status||'PENDING',settlement_return_cents:bet?.settlement_return_cents??null,
+      picks:(p.bet_proposal_legs||[]).sort((a:any,b:any)=>a.sort_order-b.sort_order).map((l:any)=>({event_name:l.event_name,selection:l.selection}))};
+  });
   const [futuresHistory,futuresMappings,futuresPolicy]=await Promise.all([
     db.from('futures_odds_history').select('bet_id,week,snapshot_date,american_odds,observed_at,source').order('snapshot_date'),
     db.from('futures_feed_mapping').select('bet_id'),
@@ -56,6 +64,7 @@ Deno.serve(async (req: Request) => {
   ]);
   return Response.json({
     weekly_tracker:trackerResult.error?null:ticketProgress(trackerResult.data||[]),
+    weekly_results:weeklyResults,
     editions:editionsResult.error?null:(editionsResult.data||[]).map((e:any)=>{
       const scores=snapshot?.payload?.completed_weeks?.find((w:any)=>w.week===e.week)?.scores;
       const teams=snapshot?.payload?.teams||[];

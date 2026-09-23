@@ -8,7 +8,7 @@ function harness() {
   const nodes = new Map();
   function element() {
     return { textContent: '', innerHTML: '', style: {}, children: [],
-      classList: { add() {}, remove() {} },
+      classList: { add() {}, remove() {}, toggle() {} },
       replaceChildren() { this.children = []; this.innerHTML = ''; },
       append(child) { this.children.push(child); } };
   }
@@ -63,8 +63,16 @@ test('an outage clears old financial and winner values and a later success recov
 });
 test('pool separates reserved cash, open stakes and settled losses and attributes only confirmed losses',()=>{
  const {context,get}=harness();
- context.renderPoolSummary({season:{starting_pool_cents:360000,prize_reserve_cents:180000,weekly_remaining_cents:130000,futures_remaining_cents:0},bonus_bank_cents:0,bets:[{status:'OPEN',stake_cents:40000},{status:'LOST',stake_cents:10000,settlement_return_cents:0}],weekly_tracker:{tickets:[{week:1,owner:'Cali Weed',status:'LOST',stake_cents:10000,settlement_return_cents:0},{week:2,owner:'Pending',status:'OPEN',stake_cents:10000}]}});
+ context.renderPoolSummary({season:{starting_pool_cents:360000,prize_reserve_cents:180000,weekly_remaining_cents:130000,futures_remaining_cents:0},bonus_bank_cents:0,bets:[{status:'OPEN',stake_cents:40000},{status:'LOST',stake_cents:10000,settlement_return_cents:0}],weekly_results:[{week:1,owner:'Cali Weed',status:'LOST',stake_cents:10000,settlement_return_cents:0},{week:2,owner:'Pending',status:'OPEN',stake_cents:10000}]});
  assert.equal(get('#poolCash').textContent,'$3,100.00');assert.equal(get('#poolOpen').textContent,'$400.00');assert.equal(get('#poolLoss').textContent,'$100.00');
- assert.match(get('#poolShameRows').children[0].textContent,/Cali Weed · Lost \$100.00/);assert.equal(get('#poolShameRows').children.length,2);
- context.renderPoolSummary(null);assert.equal(get('#poolCash').textContent,'—');assert.equal(get('#poolShameRows').children.length,1);
+ assert.equal(get('#weeklyBettingRows').children[0].children[0].textContent,'Week 1 · Cali Weed');assert.equal(get('#weeklyBettingRows').children.length,2);
+ context.renderPoolSummary(null);assert.equal(get('#poolCash').textContent,'—');assert.equal(get('#weeklyBettingRows').children.length,1);
+});
+
+test('weekly results separate cash from net profit and do not mark pending stakes as losses',()=>{
+ const {context,get}=harness();
+ context.renderPoolSummary({weekly_results:[{week:2,owner:'Arch Enemy',cash_payout_cents:5000,stake_cents:5000,status:'WON',settlement_return_cents:9629,picks:[{event_name:'Washington @ Dallas',selection:'Over 50.5'}]},{week:3,owner:'Dad Jokes',cash_payout_cents:0,stake_cents:10000,status:'PENDING'}]});
+ const flatten=n=>[n.textContent,...n.children.map(flatten)].join(' ');
+ const cards=get('#weeklyBettingRows').children;
+ assert.match(flatten(cards[0]),/Cash taken \$50.00/);assert.match(flatten(cards[0]),/Actual return \$96.29/);assert.match(flatten(cards[0]),/\+\$46.29/);assert.match(flatten(cards[1]),/Pending placement/);assert.doesNotMatch(flatten(cards[1]),/−\$100/);
 });

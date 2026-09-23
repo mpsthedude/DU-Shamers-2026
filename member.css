@@ -46,6 +46,10 @@
 #commissionerPush .button-row { display:flex; flex-wrap:wrap; gap:.5rem; }
 #commissionerPush button { width:auto; min-height:44px; }
 #commissionerPush button:disabled { opacity:.5; cursor:default; }
-#poolShame { margin-top:1rem; padding:1rem; border-left:4px solid #c8102e; background:#fff3f3; color:#242424; border-radius:6px; }
-#poolShame h3 { margin:0 0 .7rem; }
-#poolShame p { margin:.5rem 0; }
+#weeklyBettingResults { margin-top:1rem; padding:1rem; background:#f5f6f7; color:#242424; border-radius:6px; }
+#weeklyBettingResults h3 { margin:0 0 .7rem; }
+.weekly-result { border-top:1px solid #d5d7da; margin-top:1rem; padding-top:.75rem; }
+.weekly-result h4 { margin:0 0 .5rem; }
+.weekly-result-values { display:grid; grid-template-columns:repeat(auto-fit,minmax(125px,1fr)); gap:.7rem; }
+.weekly-result-values dt { font-size:.8rem; color:#555; }
+.weekly-result-values dd { margin:.25rem 0 0; font-weight:700; }
