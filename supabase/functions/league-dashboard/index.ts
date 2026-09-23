@@ -29,6 +29,8 @@ Deno.serve(async (req: Request) => {
   ]);
   if (awardsResult.error || betsResult.error || ledgerResult.error) return Response.json({ error: "dashboard_read_failed" }, { status: 500, headers: cors });
 
+  const currentAward = awardsResult.data?.[0] ?? null;
+  const {data:owner}=currentAward ? await db.from('league_owner_directory').select('manager_name,leagues!inner(name)').eq('leagues.name','DU Shamers').eq('fantasy_team_id',currentAward.fantasy_team_id).eq('active',true).maybeSingle() : {data:null};
   const ledger = ledgerResult.data || [];
   const bonusBankCents = ledger.filter((row: any) => row.account === "BONUS_BANK").reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0);
   const weeklySpentCents = Math.abs(ledger.filter((row: any) => row.account === "WEEKLY_ALLOCATION" && Number(row.amount_cents) < 0).reduce((sum: number, row: any) => sum + Number(row.amount_cents || 0), 0));
@@ -76,7 +78,7 @@ Deno.serve(async (req: Request) => {
       futures_remaining_cents: Math.max(0, season.futures_budget_cents - futuresSpentCents),
       cash_payouts_cents: cashPaidCents,
     },
-    current_award: awardsResult.data?.[0] ?? null,
+    current_award: currentAward ? {...currentAward,manager_name:owner?.manager_name||null} : null,
     weekly_awards: awardsResult.data ?? [],
     bets: (betsResult.data ?? []).map((b:any)=>({...b,
       futures_history:futuresHistory.error?null:(futuresHistory.data||[]).filter((h:any)=>h.bet_id===b.id),

@@ -35,6 +35,18 @@ function accountLabel(value) {
 }
 
 function applyLiveAward(award) {
+  const announcement = document.querySelector('#weeklyBettorAnnouncement');
+  if (announcement) {
+    const ready = award?.source_status === 'WINNER_IDENTIFIED' && !award.requires_commissioner_resolution;
+    announcement.classList.toggle('hidden', !ready);
+    if (ready) {
+      announcement.replaceChildren();
+      const title=document.createElement('h3'), detail=document.createElement('p');
+      title.textContent=`Week ${award.week} bettor: ${award.manager_name ? award.manager_name+' · ' : ''}${award.fantasy_team_name}`;
+      detail.textContent=award.award_basis==='PREVIOUS_CHAMPION'?'Previous season champion · $100 opening wager.':`Earned with ${Number(award.score).toFixed(1)} points in Week ${award.week-1}. Weekly allocation: $50 cash + $50 wager, or the full $100 wager.`;
+      announcement.append(title,detail);
+    }
+  }
   const winnerName = document.querySelector('#winnerName');
   const winnerScore = document.querySelector('#winnerScore');
   const label = document.querySelector('.weekly-winner .muted');
