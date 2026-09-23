@@ -343,7 +343,8 @@ function renderFuturesTrend(bet) {
   const current = probability(latest.american_odds), change = (current-original)*100;
   const direction = Math.abs(change)<0.00001 ? 'Unchanged' : change>0 ? 'Improved' : 'Declined';
   const stale = Date.now()-Date.parse(latest.observed_at)>25*3600000;
-  const pending = stale;
+  const manual = latest.source === 'COMMISSIONER_SCREENSHOT';
+  const pending = stale && !manual && bet.futures_covered !== false;
   const values = [original,...history.map(h=>probability(h.american_odds))];
   const low = Math.max(0,Math.min(...values)-0.005), high = Math.max(...values)+0.005;
   const coordinates = values.map((v,i)=>[8+i*184/(values.length-1),58-(v-low)/(high-low)*44]);
@@ -353,7 +354,7 @@ function renderFuturesTrend(bet) {
     <strong class="future-move ${direction.toLowerCase()}">${stale || pending ? 'Last observed: ' : ''}${direction} · ${change>0?'+':''}${change.toFixed(2)} percentage points</strong>
     <p>Ticket ${pct(original)} → Latest ${pct(current)}<br>Latest DraftKings odds <b>${esc(formatOdds(latest.american_odds))}</b></p>
     <svg class="future-chart" viewBox="0 0 200 74" role="img" aria-label="Market-implied chance: ticket ${pct(original)}, latest ${pct(current)}"><text x="8" y="10">${pct(high)}</text><polyline points="${points}"/>${dots}<text x="8" y="72">Ticket</text><text x="135" y="72">Latest check</text></svg>
-    <p class="tiny-note">${bet.status!=='OPEN'?'Final saved market history. ':''}${stale?'Older price · ':''}${pending?'Daily update pending · ':''}${bet.futures_automatic?'Automatic daily check':'Automatic checks paused'}<br>Price as of ${esc(new Date(latest.observed_at).toLocaleString('en-US'))}</p>
+    <p class="tiny-note">${bet.status!=='OPEN'?'Final saved market history. ':''}${stale?'Older price · ':''}${pending?'Daily update pending · ':''}${manual?'Manual DraftKings update — commissioner screenshot':bet.futures_automatic?'Automatic daily check':'Automatic checks paused'}<br>${manual?'Screenshot reported '+esc(latest.snapshot_date)+'. Automatic coverage unavailable for this market.':'Price as of '+esc(new Date(latest.observed_at).toLocaleString('en-US'))}</p>
     <details><summary>Price history</summary><table><thead><tr><th>Check</th><th>DK odds</th><th>Implied</th></tr></thead><tbody><tr><td>Ticket</td><td>${esc(formatOdds(bet.placed_american_odds))}</td><td>${pct(original)}</td></tr>${history.map(h=>`<tr><td>${esc(h.snapshot_date || new Date(h.observed_at).toLocaleDateString('en-US'))}</td><td>${esc(formatOdds(h.american_odds))}</td><td>${pct(probability(h.american_odds))}</td></tr>`).join('')}</tbody></table></details>
   </div>`;
 }
