@@ -14,7 +14,7 @@ updateCountdown();
 setInterval(updateCountdown,1000);
 // Keep the Friday agenda in one place as the group's remaining details settle.
 const stops = [
-  {time:'9:00 AM',kind:'PROPOSED SHUTTLE PICKUP',name:'Meet at the house',status:'BOOKING PENDING',pending:true,text:'Proposed pickup at the house, then head to Buffalo Trace. Provider and shuttle booking are still being arranged.'},
+  {time:'9:00 AM',kind:'PROPOSED SHUTTLE PICKUP',name:'Wheels up',status:'BOOKING PENDING',pending:true,text:'Proposed pickup at the house, then head to Buffalo Trace. Provider and shuttle booking are still being arranged.'},
   {time:'10:00 AM',kind:'DISTILLERY 01',name:'Buffalo Trace',status:'CONFIRMED',text:'Start in Frankfort with a tour at Buffalo Trace. Its working distillery brings the history and science of bourbon together, from production to the oak barrels that shape the whiskey.',url:'https://www.buffalotracedistillery.com/visit-us/distillery-tours/',map:'Buffalo Trace Distillery Frankfort Kentucky'},
   {time:'LUNCH · TBD',kind:'FUEL FOR THE TRAIL',name:'The Stave',status:'TENTATIVE',pending:true,text:'A lunch stop in Millville between distillery visits. Noon was requested in place of the original 12:45 p.m. reservation; the final time is still pending.',url:'https://www.thestavekentucky.com/',map:'The Stave restaurant Millville Kentucky'},
   {time:'AFTER LUNCH',kind:'CHOOSE 1–2 STOPS',name:'An open afternoon in bourbon country',status:'OPTIONS · NOT BOOKED',pending:true,options:true,text:'Pick one or two stops on the way back toward Lexington, depending on availability and the day’s pace. Allow time to return to the house around 5–5:30 PM. Tours and group tastings may need advance reservations.'},
