@@ -23,12 +23,20 @@ for (const file of ['trip.css', 'trip.js', 'favicon.svg']) {
   fs.copyFileSync(path.join(root, 'kentucky', file), path.join(tripOutput, file));
 }
 for (const name of ['hero', 'bourbon', 'racing', 'tailgate', 'dinner', 'touchdown']) {
-  fs.copyFileSync(path.join(root, 'kentucky', 'assets', `${name}.png`), path.join(tripOutput, 'assets', `${name}.png`));
+  for (const suffix of ['', '-768']) {
+    const file = `${name}${suffix}.webp`;
+    fs.copyFileSync(path.join(root, 'kentucky', 'assets', file), path.join(tripOutput, 'assets', file));
+  }
+  // Remove obsolete generated copies; retain original artwork in the source tree.
+  fs.rmSync(path.join(tripOutput, 'assets', `${name}.png`), { force: true });
 }
 for (const file of ['house-1.jpg', 'house-2.jpg', 'house-3.jpg']) {
   fs.copyFileSync(path.join(root, 'kentucky', 'assets', file), path.join(tripOutput, 'assets', file));
 }
-const tripHtml = fs.readFileSync(path.join(root, 'kentucky', 'index.html'), 'utf8').replace(/\b(src|href)="((?:assets\/)?[\w.-]+\.(?:css|js|png|jpg|svg))"/g,
-  (match, attribute, asset) => `${attribute}="${asset}?v=${crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'kentucky', asset))).digest('hex').slice(0, 12)}"`);
+const tripVersion = asset => crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'kentucky', asset))).digest('hex').slice(0, 12);
+const tripHtml = fs.readFileSync(path.join(root, 'kentucky', 'index.html'), 'utf8')
+  .replace(/\b(src|href)="((?:assets\/)?[\w.-]+\.(?:css|js|jpg|svg))"/g,
+    (match, attribute, asset) => `${attribute}="${asset}?v=${tripVersion(asset)}"`)
+  .replace(/assets\/[\w.-]+\.webp/g, asset => `${asset}?v=${tripVersion(asset)}`);
 fs.writeFileSync(path.join(tripOutput, 'index.html'), tripHtml);
 console.log('Prepared the public site with content-versioned asset URLs.');

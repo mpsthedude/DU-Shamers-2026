@@ -35,11 +35,11 @@ const viewer=document.querySelector('#art-viewer');
 if(viewer && typeof viewer.showModal==='function'){
   const viewerImage=viewer.querySelector('img');
   const caption=viewer.querySelector('.viewer-caption');
-  for(const img of document.querySelectorAll('img[src^="assets/"][src$=".png"], img[src^="assets/"][src*=".png?"]')){
+  for(const img of document.querySelectorAll('img[data-art]')){
     const button=document.createElement('button');
     button.type='button';button.className='art-expand';button.setAttribute('aria-label','Enlarge: '+img.alt);
     img.replaceWith(button);button.append(img);
-    button.addEventListener('click',()=>{viewerImage.src=img.currentSrc;viewerImage.alt=img.alt;caption.textContent=img.alt;viewer.showModal();});
+    button.addEventListener('click',()=>{viewerImage.src=img.dataset.full || img.currentSrc;viewerImage.alt=img.alt;caption.textContent=img.alt;viewer.showModal();});
   }
   viewer.querySelector('.viewer-close').addEventListener('click',()=>viewer.close());
   viewer.addEventListener('click',event=>{if(event.target===viewer){const r=viewer.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)viewer.close();}});
