@@ -14,11 +14,13 @@ updateCountdown();
 setInterval(updateCountdown,1000);
 // Keep the Friday agenda in one place as the group's remaining details settle.
 const stops = [
+  {time:'9:00 AM',kind:'PROPOSED SHUTTLE PICKUP',name:'Meet at the house',status:'BOOKING PENDING',pending:true,text:'Proposed pickup at the house, then head to Buffalo Trace. Provider and shuttle booking are still being arranged.'},
   {time:'10:00 AM',kind:'DISTILLERY 01',name:'Buffalo Trace',status:'CONFIRMED',text:'Start in Frankfort with a tour at Buffalo Trace. Its working distillery brings the history and science of bourbon together, from production to the oak barrels that shape the whiskey.',url:'https://www.buffalotracedistillery.com/visit-us/distillery-tours/',map:'Buffalo Trace Distillery Frankfort Kentucky'},
   {time:'LUNCH · TBD',kind:'FUEL FOR THE TRAIL',name:'The Stave',status:'TENTATIVE',pending:true,text:'A lunch stop in Millville between distillery visits. Noon was requested in place of the original 12:45 p.m. reservation; the final time is still pending.',url:'https://www.thestavekentucky.com/',map:'The Stave restaurant Millville Kentucky'},
   {time:'2:00 PM',kind:'DISTILLERY 02',name:'Castle & Key',status:'CONFIRMED',text:'Bourbon with a castle in the background. Set on the restored Old Taylor Distillery site, founded in 1887, Castle & Key pairs historic architecture and gardens with bourbon, rye, gin and vodka. Tour duration is still to come.',url:'https://castleandkey.com/pages/our-history',map:'Castle and Key Distillery Kentucky'},
   {time:'AFTERNOON',kind:'DISTILLERY 03 · TIME TBD',name:'Woodford Reserve',status:'CONFIRMED',text:'Our next stop is Woodford Reserve’s historic distillery in Kentucky horse country. A chance to explore the craftsmanship behind its bourbons and whiskeys. Visit time and the specific experience are still being finalized.',url:'https://www.woodfordreserve.com/our-distillery/tours-and-tastings/',map:'Woodford Reserve Distillery Kentucky'},
-  {time:'IF IT FITS',kind:'A LITTLE HORSE COUNTRY',name:'Horse farm stop',status:'POSSIBLE STOP',pending:true,text:'A possible farm visit on the way back toward Lexington. Farm, timing and arrangements are still open; this is not a booked stop.'}
+  {time:'IF IT FITS',kind:'A LITTLE HORSE COUNTRY',name:'Horse farm stop',status:'POSSIBLE STOP',pending:true,text:'A possible farm visit on the way back toward Lexington. Farm, timing and arrangements are still open; this is not a booked stop.'},
+  {time:'5–5:30 PM',kind:'PROPOSED RETURN',name:'Back to the house',status:'APPROXIMATE',pending:true,text:'Return after the afternoon stops and reset at the house. Dinner at Millstone is booked for 8:00 PM; take an Uber to the restaurant.'}
 ];
 const host=document.querySelector('#friday-stops');
 for(const stop of stops){
