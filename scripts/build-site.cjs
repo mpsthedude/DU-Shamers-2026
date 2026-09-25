@@ -16,4 +16,19 @@ for (const asset of assets) {
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/\b(src|href)="([^"]+)"/g,
   (match, attribute, asset) => versions.has(asset) ? `${attribute}="${asset}?v=${versions.get(asset)}"` : match);
 fs.writeFileSync(path.join(output, 'index.html'), html);
+// Publish only the trip page's public assets; reference photos and booking data stay out.
+const tripOutput = path.join(output, 'kentucky');
+fs.mkdirSync(path.join(tripOutput, 'assets'), { recursive: true });
+for (const file of ['trip.css', 'trip.js', 'favicon.svg']) {
+  fs.copyFileSync(path.join(root, 'kentucky', file), path.join(tripOutput, file));
+}
+for (const name of ['hero', 'bourbon', 'racing', 'tailgate', 'dinner', 'touchdown']) {
+  fs.copyFileSync(path.join(root, 'kentucky', 'assets', `${name}.png`), path.join(tripOutput, 'assets', `${name}.png`));
+}
+for (const file of ['house-1.jpg', 'house-2.jpg', 'house-3.jpg']) {
+  fs.copyFileSync(path.join(root, 'kentucky', 'assets', file), path.join(tripOutput, 'assets', file));
+}
+const tripHtml = fs.readFileSync(path.join(root, 'kentucky', 'index.html'), 'utf8').replace(/\b(src|href)="((?:assets\/)?[\w.-]+\.(?:css|js|png|jpg|svg))"/g,
+  (match, attribute, asset) => `${attribute}="${asset}?v=${crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'kentucky', asset))).digest('hex').slice(0, 12)}"`);
+fs.writeFileSync(path.join(tripOutput, 'index.html'), tripHtml);
 console.log('Prepared the public site with content-versioned asset URLs.');
