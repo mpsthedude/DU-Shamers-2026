@@ -17,9 +17,7 @@ const stops = [
   {time:'9:00 AM',kind:'PROPOSED SHUTTLE PICKUP',name:'Meet at the house',status:'BOOKING PENDING',pending:true,text:'Proposed pickup at the house, then head to Buffalo Trace. Provider and shuttle booking are still being arranged.'},
   {time:'10:00 AM',kind:'DISTILLERY 01',name:'Buffalo Trace',status:'CONFIRMED',text:'Start in Frankfort with a tour at Buffalo Trace. Its working distillery brings the history and science of bourbon together, from production to the oak barrels that shape the whiskey.',url:'https://www.buffalotracedistillery.com/visit-us/distillery-tours/',map:'Buffalo Trace Distillery Frankfort Kentucky'},
   {time:'LUNCH · TBD',kind:'FUEL FOR THE TRAIL',name:'The Stave',status:'TENTATIVE',pending:true,text:'A lunch stop in Millville between distillery visits. Noon was requested in place of the original 12:45 p.m. reservation; the final time is still pending.',url:'https://www.thestavekentucky.com/',map:'The Stave restaurant Millville Kentucky'},
-  {time:'2:00 PM',kind:'DISTILLERY 02',name:'Castle & Key',status:'CONFIRMED',text:'Bourbon with a castle in the background. Set on the restored Old Taylor Distillery site, founded in 1887, Castle & Key pairs historic architecture and gardens with bourbon, rye, gin and vodka. Tour duration is still to come.',url:'https://castleandkey.com/pages/our-history',map:'Castle and Key Distillery Kentucky'},
-  {time:'AFTERNOON',kind:'DISTILLERY 03 · TIME TBD',name:'Woodford Reserve',status:'CONFIRMED',text:'Our next stop is Woodford Reserve’s historic distillery in Kentucky horse country. A chance to explore the craftsmanship behind its bourbons and whiskeys. Visit time and the specific experience are still being finalized.',url:'https://www.woodfordreserve.com/our-distillery/tours-and-tastings/',map:'Woodford Reserve Distillery Kentucky'},
-  {time:'IF IT FITS',kind:'A LITTLE HORSE COUNTRY',name:'Horse farm stop',status:'POSSIBLE STOP',pending:true,text:'A possible farm visit on the way back toward Lexington. Farm, timing and arrangements are still open; this is not a booked stop.'},
+  {time:'AFTER LUNCH',kind:'CHOOSE 1–2 STOPS',name:'An open afternoon in bourbon country',status:'OPTIONS · NOT BOOKED',pending:true,options:true,text:'Pick one or two stops on the way back toward Lexington, depending on availability and the day’s pace. Allow time to return to the house around 5–5:30 PM. Tours and group tastings may need advance reservations.'},
   {time:'5–5:30 PM',kind:'PROPOSED RETURN',name:'Back to the house',status:'APPROXIMATE',pending:true,text:'Return after the afternoon stops and reset at the house. Dinner at Millstone is booked for 8:00 PM; take an Uber to the restaurant.'}
 ];
 const host=document.querySelector('#friday-stops');
@@ -30,7 +28,26 @@ for(const stop of stops){
   const title=document.createElement('h3');title.textContent=stop.name;const text=document.createElement('p');text.textContent=stop.text;
   const links=document.createElement('div');links.className='links';
   for(const [name,url] of [['Official website ↗',stop.url],['Directions ↗',stop.map&&'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(stop.map)]]){if(!url)continue;const a=document.createElement('a');a.href=url;a.textContent=name;a.target='_blank';a.rel='noopener noreferrer';links.append(a);}
-  body.append(label,title,text,links);const badge=document.createElement('span');badge.className='badge'+(stop.pending?' pending':'');badge.textContent=stop.status;article.append(time,body,badge);host.append(article);
+  body.append(label,title,text,links);
+  if(stop.options){
+    const grid=document.createElement('div');grid.className='distillery-options';
+    const options=[
+      ['Castle & Key','Millville','Historic castle grounds, gardens and bourbon, with cocktails and tasting flights for a scenic afternoon stop.','https://castleandkey.com/pages/visit'],
+      ['Woodford Reserve','Versailles','A classic horse-country distillery known for its bourbon craftsmanship. The shop and bar welcome visitors without a tour reservation.','https://www.woodfordreserve.com/plan-a-visit/'],
+      ['Bluegrass Distillers','Elkwood Farm · Midway','Farm-grown heirloom blue corn and craft bourbon at Elkwood Farm, with tours, tastings and a bourbon bar.','https://bluegrassdistillers.com/'],
+      ['Glenns Creek Distillery','Frankfort area','A small craft distillery making OCD #5 bourbon on site with homemade pot stills. A choice for a closer look at hands-on distilling.','https://glennscreekdistillery.com/'],
+      ['Town Branch Distillery','Lexington','Finish back in town with bourbon and whiskey from Lexington Brewing & Distilling Co., whose visitor experience also explores its brewery.','https://lexingtonbrewingco.com/distilleries-tours']
+    ];
+    for(const [name,area,bio,url] of options){
+      const card=document.createElement('div');card.className='distillery-option';
+      const heading=document.createElement('h4');const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name+' ↗';heading.append(link);
+      const location=document.createElement('span');location.className='option-area';location.textContent=area;
+      const description=document.createElement('p');description.textContent=bio;
+      card.append(heading,location,description);grid.append(card);
+    }
+    body.append(grid);
+  }
+const badge=document.createElement('span');badge.className='badge'+(stop.pending?' pending':'');badge.textContent=stop.status;article.append(time,body,badge);host.append(article);
 }
 const navLinks=[...document.querySelectorAll('.day-nav a')];
 const viewer=document.querySelector('#art-viewer');

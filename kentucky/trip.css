@@ -44,3 +44,5 @@
 .viewer-caption{font-size:.8rem;color:#d0d6cc;margin:10px 6px 0}
 @media(max-width:650px){.art-expand::after{opacity:1;top:8px;right:8px;font-size:.55rem;padding:5px 7px}.image-caption{padding:25px 12px 8px;font-size:.6rem}.art-label{font-size:.55rem;left:8px;bottom:6px;padding:3px 6px}.dinner,.racing-layout{gap:24px}.dinner-copy h2{font-size:3.2rem}.touchdown-heading{padding-block:35px 24px}.hero-bottom{font-size:.65rem}.pending-grid{grid-template-columns:1fr 1fr}}
 @media print{.touchdown-chapter,.art-expand,#art-viewer{display:none}}
+
+.distillery-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}.distillery-option{padding:14px 16px;border:1px solid var(--line);border-radius:4px}.distillery-option h4{font-size:1rem;margin:0 0 4px}.option-area{font-size:.75rem;color:var(--muted)}.distillery-option p{font-size:.875rem;line-height:1.5;margin:7px 0 0}@media(max-width:650px){.distillery-options{grid-template-columns:1fr}}
