@@ -50,7 +50,7 @@ test('public API reads published editions only and never invokes generation or a
   const db={rpc:async name=>{rpcCalls.push(name);return {data:[]};},from:table=>{
     let filtered=rows[table]||[], fields;
     const result=()=>({data:filtered.map(row=>fields?Object.fromEntries(fields.split(',').map(k=>[k,row[k]])):row)});
-    const q={select(s){fields=s.includes('!inner')?null:s;return q;},eq(k,v){filtered=filtered.filter(r=>r[k]===v);return q;},order(){return q;},limit(){return q;},
+    const q={select(s){fields=s.includes('!inner')?null:s;return q;},eq(k,v){filtered=filtered.filter(r=>r[k]===v);return q;},in(k,v){filtered=filtered.filter(r=>v.includes(r[k]));return q;},order(){return q;},limit(){return q;},
       single:async()=>({data:result().data[0]}),maybeSingle:async()=>({data:result().data[0]}),then(resolve){return Promise.resolve(result()).then(resolve);}};return q;
   }};
   const c=vm.createContext({Date,Response,createClient:()=>db,Deno:{env:{get:()=> 'server-only'},serve:fn=>handler=fn},

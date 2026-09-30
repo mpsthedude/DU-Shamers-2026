@@ -12,6 +12,7 @@ function harness(options={}){
       {data:options.reservation||{lease_id:'lease'}}:options.saveError?{error:{message:'private database details'}}:
       {data:options.result||{ok:true,week:1,winner_team_id:'3'}};}};
   const ctx=vm.createContext({Date:Clock,Request,Response,TextEncoder,Uint8Array,crypto:require('node:crypto').webcrypto,
+    publishScheduledEdition:async()=>{},
     createClient:()=>db,Deno:{env:{get:()=> 'private-value'},serve:fn=>handler=fn},
     fetchStandings:async()=>{calls.push({name:'ESPN'});if(options.fetchError)throw new Error('private-value');return {scoring_period:2};}});
   vm.runInContext(source,ctx);

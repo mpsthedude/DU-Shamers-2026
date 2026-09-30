@@ -1,12 +1,8 @@
 name: Sync DU Shamers weekly high scorer
 
 on:
-  schedule:
-    # GitHub cron is UTC. We run at both possible UTC equivalents of 9 AM ET.
-    # The Edge Function itself checks America/New_York and only performs the
-    # ESPN sync when the local hour is actually 9, covering DST automatically.
-    - cron: "5 13 * * 2"
-    - cron: "5 14 * * 2"
+  # Production scheduling lives in Supabase Cron (8 AM America/Chicago).
+  # Retained for manual diagnostics within the scheduled window.
   workflow_dispatch:
 
 permissions:
