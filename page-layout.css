@@ -1,0 +1,23 @@
+[hidden] { display:none !important; }
+html[data-page="home"] :is(#builder,#analyzer,.weekly-winner,#commissioner,#pageAccess),
+html:not([data-page="commissioner"]) #commissioner { display:none !important; }
+html[data-page="commissioner"] main > :not(.ledger-layout):not(#pageAccess) { display:none !important; }
+html[data-page="commissioner"] #ledger { display:none !important; }
+html[data-page="bet"] main > :not(.hero-grid):not(#builder):not(#analyzer):not(#pageAccess) { display:none !important; }
+html[data-page="bet"] .bank-card { display:none !important; }
+html[data-page="bet"]:not([data-can-bet="true"]) :is(#builder,#analyzer,.hero-grid) { display:none !important; }
+html[data-page="bet"] .hero-grid, .ledger-layout { grid-template-columns: minmax(0,1fr); }
+html[data-page="home"] .hero-grid { grid-template-columns: minmax(0,1fr); }
+.future-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)) !important; }
+.future-card { padding:18px !important; }
+.future-card h3 { font-size:1.1rem; }
+.future-card summary, .bank-card summary, #ledger summary, #settledTicketRecap summary { cursor:pointer; font-weight:700; padding:10px 0; }
+.page-link { display:inline-block; text-decoration:none; padding:10px 16px; border-radius:8px; background:#1262c4; color:white; font-weight:700; }
+.league-nav a[aria-current="page"] { border-bottom:3px solid #c8102e; }
+html[data-page="home"] #leagueStandings:not(:has(#standingsExpanded:checked)) .standings-table :is(th,td):nth-child(n+5) { display:none; }
+html[data-page="home"] #leagueStandings:not(:has(#standingsExpanded:checked)) .standings-table { min-width:0; width:100%; }
+.standings-toggle { display:block; padding:8px 0; font-size:.85rem; }
+@media(max-width:600px) {
+  #leagueStandings:not(:has(#standingsExpanded:checked)) .standings-table :is(th,td) { padding:9px 5px; font-size:.75rem; white-space:normal; }
+}
+html[data-page="home"] .stats-grid { display:none; }

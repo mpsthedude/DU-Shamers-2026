@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
 const assets = ['ticket-rules.js', 'app.js', 'standings.js', 'editions.js', 'weekly-tracker.js', 'live.js', 'props.js', 'analyzer.js', 'account-password.js', 'auth.js', 'styles.css', 'props.css', 'member.css', 'league-theme.css'];
-assets.push('push.js','push-sw.js','manifest.webmanifest','hub-icon.svg','hub-icon.png');
+assets.push('page-layout.js','page-layout.css','push.js','push-sw.js','manifest.webmanifest','hub-icon.svg','hub-icon.png');
 fs.mkdirSync(output, { recursive: true });
 const versions = new Map();
 for (const asset of assets) {
@@ -15,7 +15,7 @@ for (const asset of assets) {
 }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/\b(src|href)="([^"]+)"/g,
   (match, attribute, asset) => versions.has(asset) ? `${attribute}="${asset}?v=${versions.get(asset)}"` : match);
-fs.writeFileSync(path.join(output, 'index.html'), html);
+for(const page of ['index.html','commissioner.html','my-bet.html']) fs.writeFileSync(path.join(output,page),html);
 // Publish only the trip page's public assets; reference photos and booking data stay out.
 const tripOutput = path.join(output, 'kentucky');
 fs.mkdirSync(path.join(tripOutput, 'assets'), { recursive: true });

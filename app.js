@@ -327,7 +327,7 @@ function renderFutures(bets, season = {}) {
         <div><span>Stake</span><strong>${dollars(bet.stake_cents)}</strong></div>
         <div><span>${settled ? 'Official return' : 'Return if won'}</span><strong>${dollars(settled ? bet.settlement_return_cents : bet.potential_return_cents)}</strong></div>
       </div>
-      ${renderFuturesTrend(bet)}
+      <details><summary>Market movement &amp; history</summary>${renderFuturesTrend(bet)}</details>
     </article>`;
   }).join('') : '<p>No season-long tickets have been recorded yet.</p>';
 }

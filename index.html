@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="props.css" />
   <link rel="stylesheet" href="member.css" />
   <link rel="stylesheet" href="league-theme.css" />
+  <link rel="stylesheet" href="page-layout.css" />
+  <script src="page-layout.js"></script>
 </head>
 <body>
   <aside id="builderTestBanner" hidden style="padding:16px;background:#fff3cd;color:#29210b">TEST ACCOUNT · Your $100 award and submissions are simulated. Live odds and analysis use the normal API budgets and five-analysis limit. The clubhouse below shows the real league.</aside>
@@ -27,22 +29,24 @@
     <div class="topbar-actions">
       <span id="bankDataStatus" class="status-pill demo" role="status"><span class="dot"></span> Loading league bank</span>
       <span class="status-pill">DraftKings execution</span>
-      <button class="ghost-button" data-scroll="commissioner">Commissioner</button>
+      <a class="ghost-button" href="commissioner.html" data-commissioner-link hidden>Commissioner</a>
     </div>
   </header>
 
   <nav class="league-nav" aria-label="League sections">
     <div class="league-nav-inner">
-      <a href="#overview">League home</a>
-      <a href="#leagueStandings">Standings</a>
-      <a href="#weeklyEdition">Weekly Shaming</a>
-      <a href="#builder">Weekly ticket</a>
-      <a href="#futures">Futures</a>
-      <a href="#ledger">Bank ledger</a>
+      <a href="/">League home</a>
+      <a href="/#leagueStandings">Standings</a>
+      <a href="/#weeklyEdition">Weekly Shaming</a>
+      <a href="my-bet.html" data-bettor-link hidden>My weekly bet</a>
+      <a href="/#futures">Futures</a>
+      <a href="/#ledger">Bank ledger</a>
     </div>
   </nav>
 
   <main>
+<section class="panel" id="pageAccess"><h2>Your league workspace</h2><p id="pageAccessMessage">Sign in with your league account to continue.</p><button class="primary-button" id="pageSignIn">Open league account</button></section>
+<section class="panel" id="bettorEntry" data-bettor-link hidden><h2>You’re this week’s bettor</h2><p>Choose your wager amount, build a ticket, and send it to the commissioner.</p><a class="page-link" href="my-bet.html">Open my weekly bet</a></section>
     <section class="panel hidden" id="weeklyTracker">
       <div class="panel-heading"><div><div class="section-label">FOLLOW THE WEEKLY WAGER</div><h2>Weekly Ticket Tracker</h2></div></div>
       <div id="weeklyTrackerBody" aria-live="polite"></div>
@@ -64,7 +68,7 @@
           <div class="award-badge">$100</div>
         </div>
         <div class="deadline-row">
-          <span>Winner sync: Tuesday 9:00 AM ET</span>
+          <span>Winner sync: Tuesday 8:00 AM Central</span>
           <span>Hard cutoff: Sunday 11:00 AM ET</span>
         </div>
         <div class="choice-grid">
@@ -84,7 +88,7 @@
         <div class="section-label">LEAGUE BANK</div>
         <div class="bank-total"><span>Cash remaining · includes reserved prizes</span><strong id="poolCash">—</strong></div>
         <p class="tiny-note">Recorded league funds, not a live bank-account balance.</p>
-        <div class="allocation-bars">
+        <details><summary>View fund breakdown</summary><div class="allocation-bars">
           <div class="allocation-row"><span>Protected prize reserve</span><strong id="poolReserve">—</strong></div>
           <div class="allocation-row"><span>Available for weekly bets</span><strong id="poolWeekly">—</strong></div>
           <div class="allocation-row"><span>Unspent futures allocation</span><strong id="poolFutures">—</strong></div>
@@ -92,7 +96,7 @@
           <div class="allocation-row"><span>Realized betting losses</span><strong id="poolLoss">—</strong></div>
         </div>
         <p class="tiny-note" id="poolOriginal">Loading original pool…</p>
-        <div class="bonus-bank">
+        </details><div class="bonus-bank">
           <div>
             <span>League Bonus Bank</span>
             <small>Ledger balance, including returns and spending</small>
@@ -113,7 +117,7 @@
       <div class="panel-heading"><div><div class="section-label">THE LEAGUE, BY THE NUMBERS</div><h2 id="standingsTitle">Leaderboard &amp; team earnings</h2></div>
         <span id="standingsPhase" class="status-pill">Loading ESPN snapshot</span></div>
       <p id="standingsStatus" class="tiny-note" role="status">Loading the saved league standings…</p>
-      <div class="table-wrap"><table class="standings-table"><caption class="tiny-note">League records and shared-bank contributions</caption>
+      <label class="standings-toggle"><input type="checkbox" id="standingsExpanded"> Show full stats and earnings</label><div class="table-wrap"><table class="standings-table"><caption class="tiny-note">League records and shared-bank contributions</caption>
         <thead><tr><th scope="col">Power</th><th scope="col">Team</th><th scope="col">W–L–T</th><th scope="col">Points for</th><th scope="col">Points against</th><th scope="col">All-play</th><th scope="col">Top-score weeks</th><th scope="col">Cash allocated</th><th scope="col">Bonus Bank net</th></tr></thead>
         <tbody id="standingsRows"><tr><td colspan="9">Waiting for ESPN data.</td></tr></tbody>
       </table></div>
@@ -211,10 +215,10 @@
       </div>
       <p id="futuresSummary" aria-live="polite"></p>
       <div class="future-grid" id="futureGrid"></div>
-      <p class="tiny-note">DraftKings market prices are checked automatically after ESPN confirms each completed fantasy week. Percentages include sportsbook margin and show market-implied likelihood, not a model prediction or cash-out value. Returns include your stake; ticket payouts stay fixed. Tickets in the same winner market cannot all win.</p>
+      <p class="tiny-note">DraftKings market prices are checked automatically daily. Percentages include sportsbook margin and show market-implied likelihood, not a model prediction or cash-out value. Returns include your stake; ticket payouts stay fixed. Tickets in the same winner market cannot all win.</p>
     </section>
 
-    <section class="content-grid">
+    <section class="content-grid ledger-layout">
       <article class="panel" id="ledger">
         <div class="panel-heading">
           <div>
@@ -222,12 +226,12 @@
             <h2>Every dollar has a trail</h2>
           </div>
         </div>
-        <div class="table-wrap">
+        <details><summary>View all transactions</summary><div class="table-wrap">
           <table>
             <thead><tr><th>Date</th><th>Transaction</th><th>Account</th><th>Amount</th></tr></thead>
             <tbody id="ledgerRows"></tbody>
           </table>
-        </div>
+        </div></details>
       </article>
 
       <article class="panel hidden" id="commissioner">

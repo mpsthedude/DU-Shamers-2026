@@ -148,7 +148,7 @@ async function refreshMemberState({ refreshCommissioner = true } = {}) {
   if(testBanner)testBanner.hidden=!memberSessionData?.test_mode;
   updateSubmissionAccess();
   if(typeof renderAnalysisAllowance==='function')renderAnalysisAllowance(memberSessionData?.analysis_usage,Boolean(authSession),Boolean(memberSessionData?.eligible_weekly_winner));
-  if (refreshCommissioner && memberSessionData?.membership?.role === 'COMMISSIONER') await loadCommissionerConsole();
+  if (refreshCommissioner && (typeof hubPage==='undefined' || hubPage==='commissioner') && memberSessionData?.membership?.role === 'COMMISSIONER') await loadCommissionerConsole();
   else document.querySelector('#commissioner')?.classList.add('hidden');
   renderMemberModal();
 }
@@ -200,13 +200,13 @@ function renderMemberModal() {
     </div>
     ${membership ? '' : '<div class="member-card"><strong>Team access unavailable</strong><span>Use the email address on your league invitation. Contact the commissioner if your account needs a different email mapping.</span></div>'}
     ${membership?.fantasy_team_name ? `<div class="member-card"><strong>${escapeMemberText(membership.fantasy_team_name)}</strong><span>ESPN team ${escapeMemberText(membership.fantasy_team_id)} · ${escapeMemberText(membership.role)}</span>${award ? `<small>Current tracked award: Week ${award.week} · ${escapeMemberText(award.fantasy_team_name || 'pending')}${eligible ? ' · YOU HAVE THIS WEEK’S BETTING RIGHTS' : ''}</small>` : ''}${proposal ? `<small>Current ticket: ${escapeMemberText(proposal.status || proposal.decision?.choice || 'decision recorded')}</small>` : ''}</div>` : ''}
-    ${membership?.role === 'COMMISSIONER' ? `<div class="member-card"><strong>Commissioner controls enabled</strong><span>Team claims, submitted tickets, placement confirmation, and settlement are available in the Commissioner Queue below.</span><button class="member-link-button" id="jumpCommissioner" style="margin-top:.7rem">Open commissioner queue</button></div>` : ''}
+    ${membership?.role === 'COMMISSIONER' ? `<div class="member-card"><strong>Commissioner controls enabled</strong><span>Team claims, submitted tickets, placement confirmation, and settlement are available on the Commissioner page.</span><button class="member-link-button" id="jumpCommissioner" style="margin-top:.7rem">Open commissioner queue</button></div>` : ''}
     <div class="member-card"><strong>Account settings</strong><p>Your sign-in email is managed by the commissioner so team ownership stays accurate.</p><button class="member-link-button" id="changeAccountPassword">Change password</button> <button class="member-link-button" id="refreshMemberAccount">Refresh league status</button></div>`;
 
   body.querySelector('#memberSignOut')?.addEventListener('click', async () => { await authClient.auth.signOut(); closeMemberModal(); });
   body.querySelector('#refreshMemberAccount')?.addEventListener('click', () => refreshMemberState());
   body.querySelector('#changeAccountPassword')?.addEventListener('click',()=>{passwordMode='change';renderMemberModal();});
-  body.querySelector('#jumpCommissioner')?.addEventListener('click', () => { closeMemberModal(); document.querySelector('#commissioner')?.scrollIntoView({ behavior: 'smooth' }); });
+  body.querySelector('#jumpCommissioner')?.addEventListener('click', () => { closeMemberModal(); location.href='commissioner.html'; });
   const pendingClaimId = memberSessionData?.claim?.id;
   body.querySelector('#cancelTeamClaim')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
@@ -246,6 +246,7 @@ function updateSubmissionAccess() {
   const champion = memberSessionData?.current_award?.award_basis === 'PREVIOUS_CHAMPION';
   document.querySelectorAll('[data-choice="split"]').forEach(b=>{b.hidden=champion;b.disabled=champion;});
   if (canChoose && champion) { state.choice='ride'; renderChoice(); }
+  if(typeof updatePageAccess==='function') updatePageAccess(canChoose,memberSessionData,authSession);
   document.querySelector('.weekly-winner')?.classList.toggle('hidden', !canChoose);
   document.querySelector('.hero-grid')?.classList.toggle('bank-only', !canChoose);
   replaceSubmitHandler();
@@ -479,7 +480,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-queue>Refresh ticket queues</button><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + html + testTicketsMarkup() + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + providerBudgetMarkup() + integrationBudgetMarkup() + ownerInvitationMarkup();
+  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-queue>Refresh ticket queues</button><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + html + '<details><summary>Recap editor</summary>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + '</details><details><summary>Spending and data controls</summary>' + providerBudgetMarkup() + integrationBudgetMarkup() + '</details><details><summary>League accounts and invitations</summary>' + ownerInvitationMarkup() + '</details><details><summary>Test tools</summary>' + testTicketsMarkup() + '</details>';
   bindCommissionerActions();
   if(typeof renderCommissionerPush==='function')renderCommissionerPush();
 }

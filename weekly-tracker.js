@@ -7,13 +7,13 @@ function renderWeeklyTracker(snapshot) {
     const completed=(snapshot?.tickets||[]).filter(t=>['WON','LOST','PUSHED','VOID'].includes(t.status));
     recap.classList.toggle('hidden',!completed.length);
     if(completed.length){
-      const heading=document.createElement('h3');heading.textContent='Weekly bet recap';recap.append(heading);
+      const details=document.createElement('details');recap.append(details);const heading=document.createElement('summary');heading.textContent='Weekly bet recap · '+completed.length+' settled tickets';details.append(heading);
       for(const t of completed){
         const row=document.createElement('p');
         const cash=v=>Number.isInteger(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v/100):'—';
         const net=Number.isInteger(t.settlement_return_cents)?t.settlement_return_cents-t.stake_cents:null;
         row.textContent='Week '+t.week+' · '+t.owner+' · '+t.status+' · Returned '+cash(t.settlement_return_cents)+' · Net '+cash(net);
-        const picks=document.createElement('small');picks.textContent=(t.legs||[]).map(l=>l.selection).join(' + ');row.append(document.createElement('br'),picks);recap.append(row);
+        const picks=document.createElement('small');picks.textContent=(t.legs||[]).map(l=>l.selection).join(' + ');row.append(document.createElement('br'),picks);details.append(row);
       }
     }
   }
