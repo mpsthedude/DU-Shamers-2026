@@ -20,7 +20,7 @@ export function ticketProgress(rows:any[],now=Date.now()){
   const legs=(ticket.legs||[]).map((leg:any)=>{
    const s=leg.snapshot,parts=String(leg.odd_id).split('-');
    if(leg.observed_at)times.push(leg.observed_at);
-   const stale=!leg.observed_at || now-Date.parse(leg.observed_at)>180000;
+   const stale=!leg.observed_at || now-Date.parse(leg.observed_at)>720000;
    return {selection:leg.selection,event_name:leg.event_name,score:s?.score??null,clock:s?.clock??null,
     current:s?.values?.[leg.odd_id]??null,target:leg.target==null?null:Number(leg.target),unit:parts[0]?.replaceAll('_',' '),side:parts[4]||'',
     phase:s?.phase||'upcoming',observed_at:leg.observed_at??null,
@@ -29,5 +29,5 @@ export function ticketProgress(rows:any[],now=Date.now()){
   const phase=legs.length && legs.every((g:any)=>['finished','cancelled'].includes(g.phase))?'finished':legs.some((g:any)=>g.phase==='live')?'live':'upcoming';
   return {...ticket,legs,phase};
  });
- return {tickets,observed_at:times.sort()[0]||null,delayed:tickets.some(t=>t.status==='OPEN' && t.legs.some((g:any)=>!g.observed_at || now-Date.parse(g.observed_at)>180000))};
+ return {tickets,observed_at:times.sort()[0]||null,delayed:tickets.some(t=>t.status==='OPEN' && t.legs.some((g:any)=>!g.observed_at || now-Date.parse(g.observed_at)>720000))};
 }

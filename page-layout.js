@@ -21,7 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Put the league story first; financial details remain available below it.
   const main = document.querySelector('main');
   if(hubPage === 'home') {
-    for(const selector of ['#overview','#weeklyBettorAnnouncement','#bettorEntry','#weeklyTracker','#leagueStandings','#weeklyEdition','.hero-grid','.stats-grid','#futures','#settledTicketRecap','.ledger-layout']) {
+    const bankDetails=document.querySelector('.bank-card details');
+    for(const id of ['settledTicketRecap','ledger']) {const el=document.getElementById(id);if(el&&bankDetails)bankDetails.append(el);}
+    for(const selector of ['#weeklyTracker','#overview','#weeklyBettorAnnouncement','#bettorEntry','#leagueStandings','#weeklyEdition','.hero-grid','.stats-grid','#futures','.ledger-layout']) {
       const el=document.querySelector(selector);if(el) main.append(el);
     }
   }

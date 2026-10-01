@@ -9,3 +9,7 @@ Saved snapshots contain only numeric score/stat progress for ticket selections, 
 SportsGameOdds documents results at results.<periodID>.<statEntityID>.<statID>: https://sportsgameodds.com/docs/data-types/stats. Live NFL/college stat completeness still requires a bounded real-game verification after limits are configured.
 
 Validation: 58 Node checks passed, including score/prop mapping, missing values, terminal phases, and a paused worker making no provider calls. Rolled-back database checks verified object reservations, failed-call accounting, idle/duplicate/finished refresh denial, and unchanged official settlement. Live smoke checks confirmed paused worker and valid empty tracker response. No live wager or event refresh was created.
+
+
+## October 1 update
+The shared tracker is enabled. A database lease now spaces provider refreshes at least 600 seconds apart; the minute scheduler makes this approximately every 10–11 minutes while eligible games are active. Browsers read the shared dashboard cache each minute while visible, without extra sports-provider calls. A 12-minute freshness threshold accommodates scheduling latency. Existing request/object/spending limits and terminal-game exclusions remain enforced. Missing provider stats stay unavailable; only commissioner-confirmed settlement changes money. Historical ticket results and ledger transactions are nested under the League Bank details; active tickets lead the homepage.

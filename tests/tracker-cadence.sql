@@ -15,7 +15,7 @@ do $$ declare actor uuid:=gen_random_uuid(); league uuid:=gen_random_uuid(); sea
  values(season,proposal,'WEEKLY','draftkings',5000,150,12500,'OPEN',now()) returning id into bet;
  r:=public.claim_tracker_refresh(); if r->>'lease_id' is null or jsonb_array_length(r->'events')<>1 then raise exception 'claim failed'; end if;
  if public.claim_tracker_refresh()->>'skipped'<>'not_due' then raise exception 'duplicate claim accepted'; end if;
- update public.tracker_policy set last_attempt_at=now()-interval '181 seconds',lease_until=null where singleton;
+ update public.tracker_policy set last_attempt_at=now()-interval '601 seconds',lease_until=null where singleton;
  insert into public.tracker_events values('tracker-fixture',now(),true,'{"phase":"finished"}');
  if public.claim_tracker_refresh()->>'skipped'<>'no_active_games' then raise exception 'terminal game refreshed'; end if;
  if (select status from public.bets where id=bet)<>'OPEN' then raise exception 'progress changed settlement'; end if;
