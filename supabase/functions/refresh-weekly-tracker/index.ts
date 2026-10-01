@@ -12,6 +12,16 @@ Deno.serve(async(req:Request)=>{
  if(error)return Response.json({error:'tracker_claim_failed'},{status:503,headers});
  if(job?.skipped)return Response.json({skipped:job.skipped},{headers});
  if(!job?.lease_id || !job?.actor)return Response.json({error:'tracker_claim_failed'},{status:503,headers});
+ // Verify through Auth's admin API, without granting SQL access to auth.users.
+ const {data:identity,error:identityError}=await db.auth.admin.getUserById(job.actor);
+ const user=identity?.user;
+ const {data:league}=await db.from('leagues').select('id').eq('name','DU Shamers').single();
+ const {data:allowed,error:allowError}=await db.from('commissioner_allowlist').select('id')
+  .eq('league_id',league?.id).eq('email',(user?.email||'').toLowerCase()).maybeSingle();
+ if(identityError || !user?.email_confirmed_at || !user?.email || allowError || !allowed){
+  await db.from('tracker_policy').update({lease_until:null,last_error:'commissioner_unavailable'}).eq('singleton',true).eq('lease_id',job.lease_id);
+  return Response.json({error:'commissioner_unavailable'},{status:503,headers});
+ }
  const response=await paidHandler(async(_req:Request,paidFetch:any)=>{
   const ids=job.events.map((e:any)=>e.event_id);
   const {data:legs,error:legError}=await db.from('bet_proposal_legs').select('event_id,odd_id').in('event_id',ids);
