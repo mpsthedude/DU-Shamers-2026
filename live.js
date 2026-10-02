@@ -393,6 +393,5 @@ window.addEventListener('DOMContentLoaded', () => {
   loadLiveLeagueBank();
   loadLiveDraftKingsMarkets();
   // Only reads the shared dashboard snapshot; never dispatches provider refreshes.
-  setInterval(()=>{if(document.visibilityState==='visible')loadLiveLeagueBank();},60000);
   setInterval(()=>{if(document.visibilityState==='visible')loadLiveDraftKingsMarkets({preserveTicket:true});},300000);
 });

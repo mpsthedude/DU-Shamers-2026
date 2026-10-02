@@ -27,18 +27,11 @@ function renderWeeklyTracker(snapshot, currentWeek) {
   if(!snapshot){root.innerHTML='<p>Weekly ticket tracking is not connected yet.</p>';return;}
   const tickets=placedTickets;
   if(!tickets.length){root.innerHTML='<p>No placed weekly tickets to track yet.</p>';return;}
-  const hasOpen=tickets.some(t=>!['WON','LOST','PUSHED','VOID'].includes(t.status));
-  const observed=Date.parse(snapshot.observed_at),stale=snapshot.delayed || !Number.isFinite(observed) || Date.now()-observed>720000;
-  root.innerHTML=(hasOpen?`<p class="tiny-note">${snapshot.sample?'SAMPLE DATA · ':''}${hasOpen&&stale?'Updates delayed · ':''}Updates about every 10 minutes during active games · Last updated: ${Number.isFinite(observed)?esc(new Date(observed).toLocaleString()):'unavailable'}. Progress is informational; the commissioner confirms DraftKings settlement.</p>`:'<p class="tiny-note">Final results confirmed by the commissioner from DraftKings settlement.</p>')+tickets.map(ticket=>{
-    const settled=['WON','LOST','PUSHED','VOID'].includes(ticket.status);
-    const status=settled?`Official: ${ticket.status}`:ticket.phase==='finished'?'Awaiting commissioner settlement':ticket.phase==='live'?'In progress':'Upcoming';
-    return `<article class="weekly-tracked-ticket"><h3>Week ${esc(ticket.week)} · ${esc(ticket.owner)}</h3><p><strong>${esc(status)}</strong> · Stake ${money(ticket.stake_cents)} · Actual DK odds ${esc(ticket.odds>0?'+'+ticket.odds:ticket.odds??'—')}${settled?' · Official return '+money(ticket.settlement_return_cents)+' · Net '+(ticket.settlement_return_cents-ticket.stake_cents<0?'loss ':'profit ')+money(Math.abs(ticket.settlement_return_cents-ticket.stake_cents)):' · Potential total return '+money(ticket.potential_return_cents)}</p>
-      <div class="tracked-legs">${(ticket.legs||[]).map(leg=>{
-        if(settled)return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)}</p></div>`;
-        const current=typeof leg.current==='number' && Number.isFinite(leg.current)?leg.current:null;
-        const target=typeof leg.target==='number' && Number.isFinite(leg.target)?leg.target:null;
-        const kickoff=Number.isFinite(Date.parse(leg.starts_at))?'Kickoff: '+new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(leg.starts_at)):'Kickoff time not confirmed';
-        return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)} · ${esc(kickoff)+(leg.clock?' · '+esc(leg.clock):'')}</p><p>${esc(leg.score || 'Score unavailable')}</p>${target!==null?`<p>${current===null?'Stat unavailable':esc(current)} / ${esc(target)} ${esc(leg.unit || '')} · ${esc(leg.side || '')}</p>${current!==null&&target>0?`<progress max="${target}" value="${Math.max(0,Math.min(target,current))}" aria-label="Recorded stat relative to line"></progress>`:''}`:''}<small>${esc(leg.note || 'Awaiting game update')}</small></div>`;
-      }).join('')}</div></article>`;
-  }).join('');
+  root.innerHTML=tickets.map(ticket=>`
+    <article class="weekly-tracked-ticket"><h3>Week ${esc(ticket.week)} · ${esc(ticket.owner)}</h3>
+    <p><strong>Placed</strong> · Stake ${money(ticket.stake_cents)} · DK odds ${esc(ticket.odds>0?'+'+ticket.odds:ticket.odds??'—')} · Potential return ${money(ticket.potential_return_cents)}</p>
+    <div class="tracked-legs">${(ticket.legs||[]).map(leg=>{
+      const kickoff=Number.isFinite(Date.parse(leg.starts_at))?'Kickoff: '+new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(leg.starts_at)):'Kickoff time not confirmed';
+      return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)}<br>${esc(kickoff)}</p></div>`;
+    }).join('')}</div></article>`).join('');
 }

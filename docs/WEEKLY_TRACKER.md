@@ -13,3 +13,7 @@ Validation: 58 Node checks passed, including score/prop mapping, missing values,
 
 ## October 1 update
 The shared tracker is enabled. A database lease now spaces provider refreshes at least 600 seconds apart; the minute scheduler makes this approximately every 10–11 minutes while eligible games are active. Browsers read the shared dashboard cache each minute while visible, without extra sports-provider calls. A 12-minute freshness threshold accommodates scheduling latency. Existing request/object/spending limits and terminal-game exclusions remain enforced. Missing provider stats stay unavailable; only commissioner-confirmed settlement changes money. Historical ticket results and ledger transactions are nested under the League Bank details; active tickets lead the homepage.
+
+
+## Retired October 1, 2026 (Central)
+Live scores and player-stat updates are removed. The scheduler is removed, policy disabled, and worker returns HTTP 410 without calling providers. The homepage shows only placed ticket terms and scheduled kickoff. Bank history and commissioner settlement remain available. This supersedes the refresh cadence described above.

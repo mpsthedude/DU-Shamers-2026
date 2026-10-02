@@ -10,11 +10,8 @@ test('ticket progress cannot settle bets and keeps stale or cancelled games expl
  const snapshot=c.ticketProgress([{status:'OPEN',legs:[{odd_id:'points-home-game-ml-home',selection:'Home ML',snapshot:{phase:'finished',score:'Away 7 · Home 0'},observed_at:'2026-09-07T10:00:00Z'}]}],Date.parse('2026-09-07T11:00:00Z'));
  assert.equal(snapshot.tickets[0].status,'OPEN');assert.equal(snapshot.tickets[0].phase,'finished');assert.equal(snapshot.delayed,true);assert.equal(snapshot.tickets[0].legs[0].current,null);
 });
-test('worker rejects arbitrary requests and paused scheduler before fetching a provider',async()=>{
- let handler,paidCalls=0;const db={rpc:async()=>({data:{skipped:'paused'}})};
- const ctx=vm.createContext({Request,Response,createClient:()=>db,paidHandler:()=>{paidCalls++;throw new Error('unexpected')},Deno:{env:{get:()=>''},serve:f=>handler=f}});
- vm.runInContext(stripTypeScriptTypes(fs.readFileSync(path.join(__dirname,'../supabase/functions/refresh-weekly-tracker/index.ts'),'utf8').replace(/^import .*;\r?\n/gm,'')),ctx);
- assert.equal((await handler(new Request('https://test',{method:'GET'}))).status,405);
- assert.equal((await handler(new Request('https://test',{method:'POST',body:'{}'}))).status,403);
- const response=await handler(new Request('https://test',{method:'POST',body:'{"scheduled":true}'}));assert.equal((await response.json()).skipped,'paused');assert.equal(paidCalls,0);
+test('retired worker never invokes a provider',async()=>{
+ let handler;const ctx=vm.createContext({Response,Deno:{serve:f=>handler=f}});
+ vm.runInContext(fs.readFileSync('supabase/functions/refresh-weekly-tracker/index.ts','utf8'),ctx);
+ assert.equal(handler().status,410);
 });
