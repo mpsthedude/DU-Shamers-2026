@@ -175,7 +175,7 @@ async function loadLiveLeagueBank() {
     if (!response.ok) throw new Error(`league-dashboard ${response.status}`);
     const data = await response.json();
     applyLiveStatus(data);
-    if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(data.weekly_tracker);
+    if (typeof renderWeeklyTracker === 'function') renderWeeklyTracker(data.weekly_tracker, data.current_award?.week);
     if (typeof renderLeagueStandings === 'function') renderLeagueStandings(data.standings);
     if (typeof renderWeeklyEditions === 'function') renderWeeklyEditions(data.editions);
   } catch (error) {

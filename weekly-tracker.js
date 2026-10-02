@@ -1,23 +1,26 @@
 // Display-only snapshots. This module never calculates official settlement or calls a provider.
-function renderWeeklyTracker(snapshot) {
+function renderWeeklyTracker(snapshot, currentWeek) {
   const root=document.getElementById('weeklyTrackerBody');if(!root)return;
+  const allTickets=Array.isArray(snapshot?.tickets)?snapshot.tickets:[];
+  const activeWeek=Number(currentWeek)||Math.max(0,...allTickets.map(t=>Number(t.week)||0));
+  const isCurrent=t=>Number(t.week)===activeWeek && ['OPEN','PLACED'].includes(t.status);
   const recap=document.getElementById('settledTicketRecap');
   if(recap){
     recap.replaceChildren();
-    const completed=(snapshot?.tickets||[]).filter(t=>['WON','LOST','PUSHED','VOID'].includes(t.status));
+    const completed=allTickets.filter(t=>!isCurrent(t));
     recap.classList.toggle('hidden',!completed.length);
     if(completed.length){
-      const details=document.createElement('details');recap.append(details);const heading=document.createElement('summary');heading.textContent='Weekly bet recap · '+completed.length+' settled tickets';details.append(heading);
+      const details=document.createElement('details');recap.append(details);const heading=document.createElement('summary');heading.textContent='Betting history · '+completed.length+' past tickets';details.append(heading);
       for(const t of completed){
         const row=document.createElement('p');
         const cash=v=>Number.isInteger(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v/100):'—';
         const net=Number.isInteger(t.settlement_return_cents)?t.settlement_return_cents-t.stake_cents:null;
-        row.textContent='Week '+t.week+' · '+t.owner+' · '+t.status+' · Returned '+cash(t.settlement_return_cents)+' · Net '+cash(net);
+        row.textContent='Week '+t.week+' · '+t.owner+' · '+(['OPEN','PLACED'].includes(t.status)?'Awaiting commissioner settlement':t.status)+' · Returned '+cash(t.settlement_return_cents)+' · Net '+cash(net);
         const picks=document.createElement('small');picks.textContent=(t.legs||[]).map(l=>l.selection).join(' + ');row.append(document.createElement('br'),picks);details.append(row);
       }
     }
   }
-  const placedTickets=(Array.isArray(snapshot?.tickets)?snapshot.tickets:[]).filter(ticket=>['OPEN','PLACED'].includes(ticket.status));
+  const placedTickets=allTickets.filter(isCurrent);
   document.getElementById('weeklyTracker')?.classList.toggle('hidden', !placedTickets.length);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=value=>Number.isInteger(value)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100):'—';
