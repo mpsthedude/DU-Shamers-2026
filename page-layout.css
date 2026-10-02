@@ -21,3 +21,7 @@ html[data-page="home"] #leagueStandings:not(:has(#standingsExpanded:checked)) .s
   #leagueStandings:not(:has(#standingsExpanded:checked)) .standings-table :is(th,td) { padding:9px 5px; font-size:.75rem; white-space:normal; }
 }
 html[data-page="home"] .stats-grid { display:none; }
+
+.ticket-matchup-art { display:flex;align-items:center;gap:10px;margin-bottom:8px; }
+.ticket-helmet { width:72px;height:60px;flex:none;filter:drop-shadow(0 2px 2px #0002); }
+.ticket-matchup-art > span { color:#687383;font-size:14px;font-weight:700; }
