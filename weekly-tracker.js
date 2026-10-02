@@ -37,7 +37,8 @@ function renderWeeklyTracker(snapshot, currentWeek) {
         if(settled)return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)}</p></div>`;
         const current=typeof leg.current==='number' && Number.isFinite(leg.current)?leg.current:null;
         const target=typeof leg.target==='number' && Number.isFinite(leg.target)?leg.target:null;
-        return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)} · ${esc(leg.clock || 'Time unavailable')}</p><p>${esc(leg.score || 'Score unavailable')}</p>${target!==null?`<p>${current===null?'Stat unavailable':esc(current)} / ${esc(target)} ${esc(leg.unit || '')} · ${esc(leg.side || '')}</p>${current!==null&&target>0?`<progress max="${target}" value="${Math.max(0,Math.min(target,current))}" aria-label="Recorded stat relative to line"></progress>`:''}`:''}<small>${esc(leg.note || 'Awaiting game update')}</small></div>`;
+        const kickoff=Number.isFinite(Date.parse(leg.starts_at))?'Kickoff: '+new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(leg.starts_at)):'Kickoff time not confirmed';
+        return `<div class="tracked-leg"><strong>${esc(leg.selection)}</strong><p>${esc(leg.event_name)} · ${esc(kickoff)+(leg.clock?' · '+esc(leg.clock):'')}</p><p>${esc(leg.score || 'Score unavailable')}</p>${target!==null?`<p>${current===null?'Stat unavailable':esc(current)} / ${esc(target)} ${esc(leg.unit || '')} · ${esc(leg.side || '')}</p>${current!==null&&target>0?`<progress max="${target}" value="${Math.max(0,Math.min(target,current))}" aria-label="Recorded stat relative to line"></progress>`:''}`:''}<small>${esc(leg.note || 'Awaiting game update')}</small></div>`;
       }).join('')}</div></article>`;
   }).join('');
 }

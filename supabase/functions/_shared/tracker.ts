@@ -21,7 +21,7 @@ export function ticketProgress(rows:any[],now=Date.now()){
    const s=leg.snapshot,parts=String(leg.odd_id).split('-');
    if(leg.observed_at)times.push(leg.observed_at);
    const stale=!leg.observed_at || now-Date.parse(leg.observed_at)>720000;
-   return {selection:leg.selection,event_name:leg.event_name,score:s?.score??null,clock:s?.clock??null,
+   return {selection:leg.selection,event_name:leg.event_name,starts_at:leg.starts_at??null,score:s?.score??null,clock:s?.clock??null,
     current:s?.values?.[leg.odd_id]??null,target:leg.target==null?null:Number(leg.target),unit:parts[0]?.replaceAll('_',' '),side:parts[4]||'',
     phase:s?.phase||'upcoming',observed_at:leg.observed_at??null,
     note:s?.phase==='cancelled'?'Game cancelled · awaiting commissioner review':s?.phase==='finished'?'Game finished · awaiting commissioner settlement':!s?'Game update unavailable':stale?'Updates delayed':'Latest provider snapshot'};
