@@ -34,10 +34,11 @@ function accountLabel(value) {
   return map[value] || value || '—';
 }
 
-function applyLiveAward(award) {
+function applyLiveAward(award, tickets = []) {
   const announcement = document.querySelector('#weeklyBettorAnnouncement');
   if (announcement) {
-    const ready = award?.source_status === 'WINNER_IDENTIFIED' && !award.requires_commissioner_resolution;
+    const placed = tickets.some(ticket => Number(ticket.week) === Number(award?.week) && ['OPEN','PLACED','WON','LOST','PUSHED','VOID'].includes(ticket.status));
+    const ready = award?.source_status === 'WINNER_IDENTIFIED' && !award.requires_commissioner_resolution && !placed;
     announcement.classList.toggle('hidden', !ready);
     if (ready) {
       announcement.replaceChildren();
@@ -161,7 +162,7 @@ function applyLiveStatus(data) {
     if (metric) metric.textContent = Number.isInteger(data.season?.[key]) ? centsToMoney(data.season[key]) : '—';
   }
 
-  applyLiveAward(data.current_award);
+  applyLiveAward(data.current_award, data.weekly_tracker?.tickets || []);
   applyLiveLedger(data.ledger);
 }
 
