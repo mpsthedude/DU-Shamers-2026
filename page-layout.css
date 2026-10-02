@@ -25,3 +25,6 @@ html[data-page="home"] .stats-grid { display:none; }
 .ticket-matchup-art { display:flex;align-items:center;gap:8px;margin-bottom:12px; }
 .ticket-helmet { width:112px;height:88px;object-fit:contain;flex:none;filter:drop-shadow(0 4px 3px #0002); }
 .ticket-matchup-art > span { color:#687383;font-size:14px;font-weight:700; }
+/* Keep notification setup compact, including Safari's installed web app. */
+#commissionerPush:not([open]) > :not(summary) { display:none !important; }
+#commissionerPush > summary { cursor:pointer; font-size:1rem; font-weight:700; padding:6px 0; }

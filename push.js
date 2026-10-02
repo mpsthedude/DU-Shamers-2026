@@ -4,6 +4,12 @@ async function renderCommissionerPush(){
   const panel=document.querySelector('#commissioner');
   if(!panel || panel.classList.contains('hidden') || commissionerPushBusy)return;
   let box=document.querySelector('#commissionerPush');
+  if(box && box.tagName!=='DETAILS'){
+    const collapsed=document.createElement('details');
+    collapsed.id=box.id;collapsed.className=box.className;
+    collapsed.innerHTML=box.innerHTML.replace(/<h3>Commissioner alerts<\/h3>/,'<summary>Commissioner alerts</summary>');
+    box.replaceWith(collapsed);box=collapsed;panel.appendChild(box);
+  }
   if(!box){box=document.createElement('details');box.id='commissionerPush';box.className='account-card';box.innerHTML='<summary>Commissioner alerts</summary><p>Get a phone notification when a weekly ticket is submitted. Tap it to review the picks.</p><p id="pushStatus" role="status" aria-live="polite"></p><div class="button-row"><button id="pushEnable" class="primary-button" type="button" disabled>Enable alerts on this device</button> <button id="pushTest" class="secondary-button" type="button" disabled>Send test alert</button> <button id="pushDisable" class="secondary-button" type="button" disabled>Disable alerts on this device</button></div>';panel.appendChild(box);}
   commissionerPushBusy=true;
   const status=box.querySelector('#pushStatus'),enable=box.querySelector('#pushEnable'),test=box.querySelector('#pushTest'),disable=box.querySelector('#pushDisable');
