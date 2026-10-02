@@ -22,6 +22,6 @@ html[data-page="home"] #leagueStandings:not(:has(#standingsExpanded:checked)) .s
 }
 html[data-page="home"] .stats-grid { display:none; }
 
-.ticket-matchup-art { display:flex;align-items:center;gap:10px;margin-bottom:8px; }
-.ticket-helmet { width:72px;height:60px;flex:none;filter:drop-shadow(0 2px 2px #0002); }
+.ticket-matchup-art { display:flex;align-items:center;gap:8px;margin-bottom:12px; }
+.ticket-helmet { width:112px;height:88px;object-fit:contain;flex:none;filter:drop-shadow(0 4px 3px #0002); }
 .ticket-matchup-art > span { color:#687383;font-size:14px;font-weight:700; }

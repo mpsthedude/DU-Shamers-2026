@@ -7,6 +7,8 @@ const output = path.join(root, '_site');
 const assets = ['ticket-rules.js', 'app.js', 'standings.js', 'editions.js', 'weekly-tracker.js', 'live.js', 'props.js', 'analyzer.js', 'account-password.js', 'auth.js', 'styles.css', 'props.css', 'member.css', 'league-theme.css'];
 assets.push('page-layout.js','page-layout.css','push.js','push-sw.js','manifest.webmanifest','hub-icon.svg','hub-icon.png');
 fs.mkdirSync(output, { recursive: true });
+fs.mkdirSync(path.join(output,'assets','helmets'),{recursive:true});
+for(const file of fs.readdirSync(path.join(root,'assets','helmets')).filter(f=>f.endsWith('.webp'))) fs.copyFileSync(path.join(root,'assets','helmets',file),path.join(output,'assets','helmets',file));
 const versions = new Map();
 for (const asset of assets) {
   const bytes = fs.readFileSync(path.join(root, asset));

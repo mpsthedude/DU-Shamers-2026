@@ -2,8 +2,8 @@ const ticketHelmetTeams = {"Pittsburgh Steelers":["pit","#171717"],"Cleveland Br
 function ticketMatchupHelmets(eventName) {
  const teams=String(eventName||'').split(' @ ').map(name=>ticketHelmetTeams[name.trim()]);
  if(teams.length!==2 || teams.some(t=>!t))return '';
- const helmet=([code,color])=>`<svg class="ticket-helmet" viewBox="0 0 120 100" aria-hidden="true" focusable="false"><path d="M15 59C9 25 32 9 59 9c29 0 47 21 45 49L76 61 68 83 30 78Z" fill="${color}" stroke="#6b7280" stroke-width="2"/><path d="M80 51h27v26H75m17-25v36M73 70h36M41 81h30" fill="none" stroke="#87939e" stroke-width="5" stroke-linejoin="round"/><image href="https://a.espncdn.com/i/teamlogos/nfl/500/${code}.png" x="27" y="27" width="45" height="40"/></svg>`;
- return '<div class="ticket-matchup-art">'+helmet(teams[0])+'<span aria-hidden="true">@</span>'+helmet(teams[1])+'</div>';
+ const helmet=([code],side)=>`<img class="ticket-helmet" src="assets/helmets/${code}-${side}.webp" alt="" width="120" height="100" loading="lazy">`;
+ return '<div class="ticket-matchup-art" aria-hidden="true">'+helmet(teams[0],'right')+'<span>@</span>'+helmet(teams[1],'left')+'</div>';
 }
 // Display-only snapshots. This module never calculates official settlement or calls a provider.
 function renderWeeklyTracker(snapshot, currentWeek) {
