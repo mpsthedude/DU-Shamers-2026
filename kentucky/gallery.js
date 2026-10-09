@@ -1,10 +1,9 @@
-/* Shared trip gallery. Public reads; member uploads are authorized server-side. */
+/* Shared trip gallery. Public browsing and uploads; image limits are enforced server-side. */
 (() => {
   'use strict';
   const base = 'https://xvnkwtiydyrksucgiphi.supabase.co';
   const key = 'sb_publishable_oTJVPjW_EdOokBZfTSJKaA_GuUwJjOF';
   const api = base + '/functions/v1/trip-photos';
-  const client = window.supabase?.createClient(base, key);
   const $ = selector => document.querySelector(selector);
   const seeds = [
     {id:'first-round', url:'assets/trip-photo-1.jpg', thumb:'assets/trip-thumb-1.jpg', caption:'First round with the boys.', alt:'Three friends enjoying drinks at the bar'},
@@ -59,24 +58,9 @@
   }
   $('#gallery-refresh').addEventListener('click',refresh);
   const dialog=$('#upload-dialog');
-  async function sessionUi() {
-    if(!client) {$('#photo-signin').hidden=true;$('#photo-upload').hidden=true;$('#upload-status').textContent='Sign-in could not load. Refresh the page and try again.';return;}
-    const {data}=await client.auth.getSession();
-    $('#photo-signin').hidden=Boolean(data.session);$('#photo-upload').hidden=!data.session;
-  }
-  $('#add-photos').addEventListener('click',()=>{dialog.showModal();sessionUi();});
+  $('#add-photos').addEventListener('click',()=>dialog.showModal());
   $('#upload-close').addEventListener('click',()=>{if(!busy)dialog.close();});
   dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
-  $('#photo-signin').addEventListener('submit',async event=>{
-    event.preventDefault(); const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;
-    $('#upload-status').textContent='Signing in…';
-    try {
-      const {error}=await client.auth.signInWithPassword({email:form.elements.email.value.trim(),password:form.elements.password.value});
-      if(error)throw error; form.reset();$('#upload-status').textContent='';await sessionUi();
-    } catch {$('#upload-status').textContent='Could not sign in. Check your email and password and try again.';}
-    finally {button.disabled=false;}
-  });
-  $('#photo-signout').addEventListener('click',async()=>{await client.auth.signOut({scope:'local'});await sessionUi();});
   async function prepare(file) {
     if(file.size>30*1024*1024)throw new Error(`${file.name}: choose a photo under 30 MB.`);
     const url=URL.createObjectURL(file),img=new Image();
@@ -99,9 +83,8 @@
     for(const file of files){
       $('#upload-status').textContent=`Uploading ${saved+failures.length+1} of ${files.length}… Keep this page open.`;
       try{
-        const blob=await prepare(file),{data}=await client.auth.getSession();
-        if(!data.session)throw new Error('Please sign in again.');
-        const response=await fetch(api,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${data.session.access_token}`,'Content-Type':'image/jpeg'},body:blob});
+        const blob=await prepare(file);
+        const response=await fetch(api,{method:'POST',headers:{apikey:key,'Content-Type':'image/jpeg'},body:blob});
         const result=await response.json();if(!response.ok)throw new Error(result.error || 'Upload failed.');
         photos.unshift(result.photo);selected=0;saved++;render();
       }catch(error){failures.push(`${file.name}: ${error.message}`);}

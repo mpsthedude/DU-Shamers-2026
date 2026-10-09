@@ -17,16 +17,7 @@ Deno.serve(async (req: Request) => {
       if (error) return json({error: "Photos are temporarily unavailable. Please try again."}, 503);
       return json({photos: data.filter(item => item.id).map(item => ({id: item.name, url: db.storage.from(bucket).getPublicUrl(`photos/${item.name}`).data.publicUrl, caption: "From the trip"})), more: data.length === 100});
     }
-    // Public viewing; every write verifies identity and current directory membership.
-    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-    if (!token) return json({error: "Sign in with your DU Shamers account to add photos."}, 401);
-    const {data: {user}, error: authError} = await db.auth.getUser(token);
-    if (authError || !user?.email || !user.email_confirmed_at) return json({error: "Please sign in again to add photos."}, 401);
-    const {data: league, error: leagueError} = await db.from("leagues").select("id").eq("name", "DU Shamers").single();
-    if (leagueError) return json({error: "Member access is temporarily unavailable."}, 503);
-    const {data: member, error: memberError} = await db.from("league_owner_directory").select("id").eq("league_id", league.id).eq("active", true).ilike("email", user.email.replace(/[\\%_]/g, "\\$&")).limit(1).maybeSingle();
-    if (memberError) return json({error: "Member access is temporarily unavailable."}, 503);
-    if (!member) return json({error: "Photo uploads are available to invited DU Shamers members."}, 403);
+    // Public uploads explicitly enabled by the site owner. Keep file limits enforced here.
     if (req.headers.get("content-type")?.split(";")[0] !== "image/jpeg") return json({error: "Please choose a photo that can be converted to JPEG."}, 415);
     if (Number(req.headers.get("content-length")) > maxBytes) return json({error: "Photo must be under 6 MB."}, 413);
     const reader = req.body?.getReader();
