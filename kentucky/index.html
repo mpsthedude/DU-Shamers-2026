@@ -8,6 +8,8 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="trip.css">
   <script src="trip.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js" defer></script>
+  <script src="gallery.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#itinerary">Skip to the itinerary</a>
@@ -19,7 +21,24 @@
   <div class="hero-copy"><p class="eyebrow">LEXINGTON, KENTUCKY <span>OCT 08—11, 2026</span></p><h1 id="trip-title">BOURBON, BETS <em>&</em><br>BROTHERHOOD<span class="period">.</span></h1><p class="tagline">The DU boys are on the loose again.</p><a class="button primary" href="#itinerary">Meet the weekend <span aria-hidden="true">↓</span></a></div>
   <div class="countdown" aria-label="Countdown to the trip"><div><p class="eyebrow" id="countdown-title">THE BOYS ARE BACK IN</p><p class="countdown-date">October 8 · 5 p.m. Eastern</p></div><div class="countdown-units" role="timer" aria-labelledby="countdown-title"><div><strong id="count-days">—</strong><span>DAYS</span></div><div><strong id="count-hours">—</strong><span>HOURS</span></div><div><strong id="count-minutes">—</strong><span>MINUTES</span></div><div><strong id="count-seconds">—</strong><span>SECONDS</span></div></div></div><div class="hero-bottom"><span>09 BROTHERS / 03 DAYS / ONE HELL OF A WEEKEND</span><span>AI REUNION ART</span></div>
 </section>
-<nav class="day-nav" aria-label="Trip sections"><a href="#thursday">08 <span>Thursday</span></a><a href="#friday">09 <span>Friday</span></a><a href="#saturday">10 <span>Saturday</span></a><a href="#sunday">11 <span>Sunday</span></a><a href="#stay">⌂ <span>The house</span></a></nav>
+<nav class="day-nav" aria-label="Trip sections"><a href="#photos">↗ <span>Trip photos</span></a><a href="#thursday">08 <span>Thursday</span></a><a href="#friday">09 <span>Friday</span></a><a href="#saturday">10 <span>Saturday</span></a><a href="#sunday">11 <span>Sunday</span></a><a href="#stay">⌂ <span>The house</span></a></nav>
+
+<section class="trip-gallery wrap" id="photos" aria-labelledby="photos-title">
+  <div class="gallery-heading"><div><p class="eyebrow">LIVE FROM KENTUCKY</p><h2 id="photos-title">Wish you<br><em>were here.</em></h2><p>The boys are on the loose. Here's the proof.</p></div><button class="button primary" id="add-photos" type="button">Add photos <span aria-hidden="true">＋</span></button></div>
+  <div class="gallery-stage" tabindex="0" role="region" aria-label="Trip photos. Use left and right arrow keys to browse.">
+    <img id="gallery-photo" src="assets/trip-photo-1.jpg" alt="Three friends enjoying drinks at the bar" width="1350" height="1800" loading="lazy">
+    <button class="gallery-arrow previous" type="button" aria-label="Previous photo">‹</button><button class="gallery-arrow next" type="button" aria-label="Next photo">›</button>
+  </div>
+  <div class="gallery-details" aria-live="polite"><p id="gallery-caption">First round with the boys.</p><span id="gallery-count">1 / 2</span></div>
+  <div class="gallery-thumbnails" aria-label="Choose a trip photo"></div>
+  <p class="small" id="gallery-status" role="status"></p>
+  <button id="gallery-refresh" type="button" class="gallery-text-button">Refresh photos</button>
+  <noscript><p>Enable JavaScript to flip through photos and add your own.</p><img src="assets/trip-photo-2.jpg" alt="The crew making a stop at Buc-ee’s" loading="lazy"></noscript>
+</section>
+<dialog id="upload-dialog" aria-labelledby="upload-title"><button type="button" id="upload-close" class="gallery-text-button">Close ×</button><h3 id="upload-title">Add to the weekend.</h3><p class="small">Photos appear on this public trip page for everyone to enjoy.</p>
+<form id="photo-signin"><p>Sign in with your DU Shamers member account.</p><label>Email<input type="email" name="email" autocomplete="username" required></label><label>Password<input type="password" name="password" autocomplete="current-password" required></label><button class="button primary" type="submit">Sign in</button><p class="small">Need help with your account? <a href="/">Visit the clubhouse</a>.</p></form>
+<form id="photo-upload" hidden><label>Choose photos<input type="file" name="photos" accept="image/*" multiple required></label><p class="small">Choose up to 10 photos at a time. JPEG, PNG and WebP work best; if a HEIC photo cannot be opened, export it as JPEG first. Photos are resized before uploading.</p><button class="button primary" type="submit">Upload photos</button><button class="gallery-text-button" id="photo-signout" type="button">Sign out</button></form><p id="upload-status" role="status" aria-live="polite"></p></dialog>
+
 <section class="intro wrap" id="itinerary"><div><p class="eyebrow">THE REUNION / CLASS OF ’04</p><h2>Older boys.<br><em>Same brotherhood.</em></h2></div><div><p>Good bourbon. Fast horses. SEC football. Three days back together in Kentucky, with just enough of a plan to keep the boys moving.</p><p class="small">All itinerary times are Eastern, local to Lexington. Plans below reflect the group’s latest arrangements.</p></div></section>
 <div class="crew wrap" aria-label="The nine brothers"><span>THE ROLL CALL</span><p>Mike · Sean · Belsky · Daane · FACE · Hatch · Dengo · Mark · Tom C</p></div>
 <section class="day wrap arrival" id="thursday"><div class="day-heading"><div class="date-block"><strong>08</strong><span>THU / OCT</span></div><div><p class="eyebrow">DAY ONE</p><h2>Back together.</h2></div><span class="day-word">ARRIVE</span></div><div class="arrival-grid"><div><h3>Drop the bags.<br>Find the boys.</h3><p>Arrive in Lexington and settle into our home base. Thursday evening is open for catching up; arrival and airport pickup plans are still coming together.</p></div><div class="arrival-ticket"><span class="eyebrow">HOUSE CHECK-IN</span><strong>5:00 <small>PM</small></strong><p>Thursday, October 8</p><a href="#stay">See the house & stay details ↗</a></div></div></section>
