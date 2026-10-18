@@ -32,7 +32,7 @@ for (const name of ['hero', 'bourbon', 'racing', 'tailgate', 'dinner', 'touchdow
   // Remove obsolete generated copies; retain original artwork in the source tree.
   fs.rmSync(path.join(tripOutput, 'assets', `${name}.png`), { force: true });
 }
-for (const file of ['house-1.jpg', 'house-2.jpg', 'house-3.jpg', 'trip-photo-1.jpg', 'trip-photo-2.jpg', 'trip-thumb-1.jpg', 'trip-thumb-2.jpg']) {
+for (const file of ['venmo-qr.jpg', 'paypal-qr.jpg', 'house-1.jpg', 'house-2.jpg', 'house-3.jpg', 'trip-photo-1.jpg', 'trip-photo-2.jpg', 'trip-thumb-1.jpg', 'trip-thumb-2.jpg']) {
   fs.copyFileSync(path.join(root, 'kentucky', 'assets', file), path.join(tripOutput, 'assets', file));
 }
 const tripVersion = asset => crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'kentucky', asset))).digest('hex').slice(0, 12);
