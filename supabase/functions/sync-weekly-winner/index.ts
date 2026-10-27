@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 import { fetchStandings } from "../_shared/standings.ts";
 import { publishScheduledEdition } from "../_shared/weekly-publication.ts";
+import { fetchLineupInsights } from "../_shared/lineup-roasts.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -38,7 +39,8 @@ Deno.serve(async (req: Request) => {
     const hash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
     const {data:result,error}=await db.rpc("finish_weekly_sync",{p_season:season.id,p_lease:lease.lease_id,p_hash:hash,p_payload:payload});
     if(error) return json({error:"sync_save_failed"},503);
-    if(result?.ok && !result?.skipped) await publishScheduledEdition(db,season.id,result.week);
+    if(result?.ok && !result?.skipped) await publishScheduledEdition(db,season.id,result.week,
+      facts=>fetchLineupInsights(result.week,facts,Deno.env.get("ESPN_S2")||"",Deno.env.get("ESPN_SWID")||Deno.env.get("SWID")||""));
     return json(result,result?.skipped==="scores_not_finalized"?409:200);
   } catch(error) {
     const code=error instanceof Error && error.message==="espn_credentials_not_configured" ? error.message : "espn_sync_failed";

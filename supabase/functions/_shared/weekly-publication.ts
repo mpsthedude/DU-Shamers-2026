@@ -1,7 +1,8 @@
 import { draftEdition } from "./editions.ts";
+import { playerRoast } from "./lineup-roasts.ts";
 
 // Scheduled recap uses saved, verified facts and local rules: no paid AI calls.
-export async function publishScheduledEdition(db: any, season: string, week: number) {
+export async function publishScheduledEdition(db: any, season: string, week: number, loadLineups?: (facts:any[])=>Promise<any[]>) {
   if (!Number.isInteger(week) || week < 1 || week > 18) return;
   const {data:existing,error:lookupError}=await db.from("weekly_editions").select("id")
     .eq("season_id",season).eq("week",week).eq("status","PUBLISHED").limit(1).maybeSingle();
@@ -16,6 +17,10 @@ export async function publishScheduledEdition(db: any, season: string, week: num
   const prior=week>1 ? await db.rpc("weekly_edition_facts",{p_snapshot:snapshot.id,p_week:week-1}) : {data:[]};
   if(prior.error) throw new Error("edition_previous_facts_unavailable");
   const entries=draftEdition(facts,week,prior.data || []);
+  if(loadLineups) {
+    const insights=await loadLineups(facts);
+    for(const entry of entries) entry.prose=playerRoast(insights.find(i=>i.team_id===entry.team_id),entry.team_id==='3')+' '+entry.prose;
+  }
   const {data:draft,error:createError}=await db.rpc("manage_weekly_edition",{
     p_actor:actor,p_season:season,p_action:"CREATE",p_week:week,p_snapshot:snapshot.id,p_entries:entries});
   if(createError || !draft?.edition_id) throw new Error("edition_create_failed");
