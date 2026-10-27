@@ -18,6 +18,16 @@ test('invalid and incomplete fact sets cannot generate an edition',()=>{
   assert.throws(()=>ctx.draftEdition(facts().slice(1),1));
   const f=facts();f[0].score=null;assert.throws(()=>ctx.draftEdition(f,1));
 });
+
+test('weekly prose follows rank and score changes and varies even when rank is unchanged',()=>{
+  const prior=facts(), current=facts();
+  current[0].weekly_rank=1;current[0].score=100;
+  const prose=ctx.draftEdition(current,7,prior)[0].prose;
+  assert.match(prose,/first-place/);assert.match(prose,/Up from twelfth/);assert.match(prose,/Scoring improved/);
+  const a=ctx.draftEdition(current,7,prior),b=ctx.draftEdition(current,8,prior);
+  for(let i=0;i<12;i++) assert.notEqual(a[i].prose,b[i].prose);
+  assert.equal(new Set(a.map(e=>e.prose)).size,12);
+});
 test('commissioner editor escapes HTML and locks the Supreme Leader field',()=>{
   const c=vm.createContext({escapeMemberText:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../editions.js'),'utf8'),c);

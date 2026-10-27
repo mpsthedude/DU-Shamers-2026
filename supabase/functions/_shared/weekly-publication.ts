@@ -13,7 +13,9 @@ export async function publishScheduledEdition(db: any, season: string, week: num
   const {data:facts,error:factsError}=await db.rpc("weekly_edition_facts",{p_snapshot:snapshot.id,p_week:week});
   if(factsError) throw new Error("edition_facts_unavailable");
   const actor="54d35b79-ad66-483b-b5ce-c3c458ad791c";
-  const entries=draftEdition(facts,week);
+  const prior=week>1 ? await db.rpc("weekly_edition_facts",{p_snapshot:snapshot.id,p_week:week-1}) : {data:[]};
+  if(prior.error) throw new Error("edition_previous_facts_unavailable");
+  const entries=draftEdition(facts,week,prior.data || []);
   const {data:draft,error:createError}=await db.rpc("manage_weekly_edition",{
     p_actor:actor,p_season:season,p_action:"CREATE",p_week:week,p_snapshot:snapshot.id,p_entries:entries});
   if(createError || !draft?.edition_id) throw new Error("edition_create_failed");
