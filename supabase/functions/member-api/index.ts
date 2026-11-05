@@ -289,7 +289,9 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     return claimResult(db, { p_actor: user.id, p_league: league.id, p_action: "CANCEL", p_claim: claimId });
   }
 
-  if (action === "submit_weekly_bet") {
+  const preview = action === "validate_commissioner_preview";
+  if (preview || action === "submit_weekly_bet") {
+    if(preview && (!ctx.isCommissioner || membership?.role!=="COMMISSIONER")) return json({error:"commissioner_not_authorized"},403);
     if (!membership?.id || !membership?.fantasy_team_id) return json({error:"approved_team_membership_required"},403);
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuid.test(body?.request_id || "") || !uuid.test(body?.award_id || "")) return json({error:"invalid_submission"},400);
@@ -298,14 +300,17 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
     if (!choice) return json({error:"invalid_weekly_choice"},400);
     let legs;
     try { legs=requestedLegs(body.legs); if (ticketConflict(legs)) throw new Error("conflicting_selections"); } catch(error) { return json({error:(error as Error).message},400); }
-    const {season} = await currentSeasonAndAward(db,league.id);
+    const {season,award} = await currentSeasonAndAward(db,league.id);
     if (!season) return json({error:"season_not_found"},409);
     const args = {p_actor:user.id,p_season:season.id,p_award:body.award_id,p_request:body.request_id,p_choice:choice,
       p_request_body:{award_id:body.award_id,choice,legs}};
+    if(preview && (!award || award.id!==body.award_id || (award.award_basis==="PREVIOUS_CHAMPION" && choice!=="LET_IT_RIDE_100"))) return json({error:"invalid_weekly_choice"},409);
+    if(!preview){
     const preflight = await db.rpc("submit_weekly_ticket",args);
     if (preflight.error) return weeklyError(preflight.error);
     if (preflight.data?.ok) return json(preflight.data);
     if (preflight.data?.validation_required !== true) return json({error:"weekly_submission_failed"},500);
+    }
     let checked;
     try { checked=await validateLiveLegs(legs,paidFetch); }
     catch(error) {
@@ -314,6 +319,7 @@ Deno.serve(paidHandler(async (req: Request, paidFetch: any) => {
       return json({error:known.includes(message)?message:"selection_provider_unavailable",
         ...(message === "selection_changed" ? {updated_legs:(error as any).updated_legs} : {})},409);
     }
+    if(preview) return json({preview_validated:true,legs:checked.length});
     const result = await db.rpc("submit_weekly_ticket",{...args,p_legs:checked});
     if (result.error) return weeklyError(result.error);
     return json(result.data);

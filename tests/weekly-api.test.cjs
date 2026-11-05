@@ -102,3 +102,13 @@ test('reviewable changes still reject unavailable or started selections',()=>{
  e.status.started=true;
  assert.throws(()=>ctx.verifiedLeg(e,leg,now,true),/event_already_started/);
 });
+
+test('preview validates only for the commissioner and never calls the submission RPC',async()=>{
+ const h=harness(),body={action:'validate_commissioner_preview',choice:'split',award_id:'11111111-1111-4111-8111-111111111111',request_id:'22222222-2222-4222-8222-222222222222',legs:[leg]};
+ assert.equal((await h.post(body)).status,403);assert.equal(h.validations,0);
+ h.ctx.authenticatedContext=async()=>({db:h.db,user:{id:'actor'},league:{id:'league'},membership:{id:'member',fantasy_team_id:'3',role:'COMMISSIONER'},isCommissioner:true});
+ h.ctx.currentSeasonAndAward=async()=>({season:{id:'season'},award:{id:body.award_id}});
+ const r=await h.post(body);assert.equal(r.status,200);assert.equal((await r.json()).preview_validated,true);assert.equal(h.validations,1);assert.equal(h.calls.length,0);
+ h.ctx.validateLiveLegs=async()=>{throw Object.assign(new Error('selection_changed'),{updated_legs:[leg]});};
+ const changed=await h.post(body);assert.equal(changed.status,409);assert.equal((await changed.json()).updated_legs.length,1);assert.equal(h.calls.length,0);
+});

@@ -60,7 +60,9 @@ const ledger = [
   { date: 'Sep 1', label: 'Weekly high-score allocation', account: 'Weekly program', amount: -1400 },
 ];
 
-const saved = JSON.parse(localStorage.getItem('duShamersDemoState') || '{}');
+const draftStorage = typeof commissionerPreview !== 'undefined' && commissionerPreview ? sessionStorage : localStorage;
+const draftKey = typeof commissionerPreview !== 'undefined' && commissionerPreview ? 'duShamersCommissionerPreview' : 'duShamersDemoState';
+const saved = JSON.parse(draftStorage.getItem(draftKey) || '{}');
 const state = {
   choice: saved.choice || null,
   legs: [],
@@ -74,7 +76,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 function persist() {
-  localStorage.setItem('duShamersDemoState', JSON.stringify({
+  draftStorage.setItem(draftKey, JSON.stringify({
     choice: state.choice,
     submissions: state.submissions,
   }));

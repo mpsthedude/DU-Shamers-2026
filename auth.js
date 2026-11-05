@@ -148,6 +148,10 @@ async function refreshMemberState({ refreshCommissioner = true } = {}) {
   if(testBanner)testBanner.hidden=!memberSessionData?.test_mode;
   updateSubmissionAccess();
   if(typeof renderAnalysisAllowance==='function')renderAnalysisAllowance(memberSessionData?.analysis_usage,Boolean(authSession),Boolean(memberSessionData?.eligible_weekly_winner));
+  if(typeof commissionerPreview!=='undefined' && commissionerPreview){
+    const analyze=document.querySelector('#analyzeButton');if(analyze){analyze.disabled=true;analyze.textContent='Analysis reserved for the weekly winner';}
+    const allowance=document.querySelector('#analysisAllowance');if(allowance)allowance.textContent='Preview uses live odds validation. The winner keeps their five analyses.';
+  }
   if (refreshCommissioner && (typeof hubPage==='undefined' || hubPage==='commissioner') && memberSessionData?.membership?.role === 'COMMISSIONER') await loadCommissionerConsole();
   else document.querySelector('#commissioner')?.classList.add('hidden');
   renderMemberModal();
@@ -240,7 +244,8 @@ function replaceSubmitHandler() {
 }
 
 function updateSubmissionAccess() {
-  const canChoose = Boolean(authSession && memberSessionData?.membership?.fantasy_team_id &&
+  const preview = typeof commissionerPreview !== 'undefined' && commissionerPreview;
+  const canChoose = preview ? Boolean(authSession && memberSessionData?.membership?.role === 'COMMISSIONER') : Boolean(authSession && memberSessionData?.membership?.fantasy_team_id &&
     memberSessionData?.eligible_weekly_winner && memberSessionData?.submission_window_open &&
     (!memberSessionData?.current_proposal || memberSessionData.current_proposal.status === 'REJECTED'));
   const champion = memberSessionData?.current_award?.award_basis === 'PREVIOUS_CHAMPION';
@@ -253,7 +258,8 @@ function updateSubmissionAccess() {
   const button = document.querySelector('#submitButton');
   if (!button) return;
   button.disabled = false;
-  if (!authSession) button.textContent = 'Sign in to submit';
+  if (preview && canChoose) button.textContent = 'Validate practice ticket';
+  else if (!authSession) button.textContent = 'Sign in to submit';
   else if (!memberSessionData?.membership?.fantasy_team_id) button.textContent = 'Claim team to submit';
   else if (['SUBMITTED', 'AWAITING_COMMISSIONER_PLACEMENT', 'PLACED'].includes(memberSessionData?.current_proposal?.status)) { button.textContent = 'Ticket submitted ✓'; button.disabled = true; }
   else if (!memberSessionData?.eligible_weekly_winner) button.textContent = 'Weekly high scorer only';
@@ -285,9 +291,10 @@ function applyTicketUpdates(updated) {
 }
 
 async function submitPersistentTicket() {
+  const preview = typeof commissionerPreview !== 'undefined' && commissionerPreview;
   const conflict = ticketConflict(state.legs);
   if (conflict) return showToast(conflict);
-  if (!authSession || !memberSessionData?.membership?.fantasy_team_id || !memberSessionData?.eligible_weekly_winner) {
+  if (!authSession || (preview ? memberSessionData?.membership?.role !== 'COMMISSIONER' : (!memberSessionData?.membership?.fantasy_team_id || !memberSessionData?.eligible_weekly_winner))) {
     openMemberModal();
     if (authSession && memberSessionData?.membership?.fantasy_team_id && !memberSessionData?.eligible_weekly_winner) showToast('Only this week’s high scorer can submit the league wager.');
     return;
@@ -298,7 +305,7 @@ async function submitPersistentTicket() {
   const decimal = combinedDecimal();
   const combinedOdds = state.legs.length === 1 ? state.legs[0].odds : decimalToAmerican(decimal);
   const payload = {
-    action: 'submit_weekly_bet',
+    action: preview ? 'validate_commissioner_preview' : 'submit_weekly_bet',
     award_id: memberSessionData.current_award?.id,
     choice: state.choice,
     estimated_american_odds: combinedOdds,
@@ -330,6 +337,12 @@ async function submitPersistentTicket() {
   try {
     const result = await memberRequest('POST', payload);
     pendingWeeklySubmission = null;
+    if (preview) {
+      if (!result?.preview_validated) throw new Error('Preview validation did not complete.');
+      const notice=document.querySelector('#ticketUpdateNotice');
+      notice.hidden=false;notice.textContent='Practice ticket validated: '+result.legs+' pick(s), $'+stake+' stake. No ticket was submitted.';
+      button.disabled=false;button.textContent=original;return;
+    }
     document.querySelector('#ticketUpdateNotice').hidden = true;
     showToast('Ticket submitted to the commissioner.');
     await refreshMemberState();
@@ -479,7 +492,7 @@ function renderCommissionerConsole() {
       <article class="commissioner-persistent-item"><h3>${escapeMemberText(bet.category)} · ${formatOdds(bet.placed_american_odds)} · ${commissionerMoney(bet.stake_cents)}</h3><p>Potential return ${commissionerMoney(bet.potential_return_cents)}${bet.sportsbook_ticket_ref ? ` · DK ref ${escapeMemberText(bet.sportsbook_ticket_ref)}` : ''}</p><div class="commissioner-actions"><button class="commissioner-action primary" data-settle-win="${bet.id}" data-return="${bet.potential_return_cents}">Won</button><button class="commissioner-action danger" data-settle-loss="${bet.id}">Lost</button><button class="commissioner-action" data-settle-push="${bet.id}" data-return="${bet.stake_cents}">Push/Void</button></div></article>`).join('');
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">✓</div><p>No team claims, ticket placements, or open bets need commissioner action.</p></div>';
-  queue.innerHTML = '<div class="commissioner-actions"><button class="commissioner-action" data-refresh-queue>Refresh ticket queues</button><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + html + '<details><summary>Recap editor</summary>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + '</details><details><summary>Spending and data controls</summary>' + providerBudgetMarkup() + integrationBudgetMarkup() + '</details><details><summary>League accounts and invitations</summary>' + ownerInvitationMarkup() + '</details><details><summary>Test tools</summary>' + testTicketsMarkup() + '</details>';
+  queue.innerHTML = '<div class="commissioner-actions"><a class="commissioner-action" href="commissioner.html?view=winner">Test weekly winner builder</a><button class="commissioner-action" data-refresh-queue>Refresh ticket queues</button><button class="commissioner-action" data-refresh-standings>Refresh ESPN leaderboard</button></div>' + html + '<details><summary>Recap editor</summary>' + (typeof commissionerEditionMarkup==='function'?commissionerEditionMarkup(commissionerData):'') + '</details><details><summary>Spending and data controls</summary>' + providerBudgetMarkup() + integrationBudgetMarkup() + '</details><details><summary>League accounts and invitations</summary>' + ownerInvitationMarkup() + '</details><details><summary>Test tools</summary>' + testTicketsMarkup() + '</details>';
   bindCommissionerActions();
   if(typeof renderCommissionerPush==='function')renderCommissionerPush();
 }

@@ -3,10 +3,10 @@ html[data-page="home"] :is(#builder,#analyzer,.weekly-winner,#commissioner,#page
 html:not([data-page="commissioner"]) #commissioner { display:none !important; }
 html[data-page="commissioner"] main > :not(.ledger-layout):not(#pageAccess) { display:none !important; }
 html[data-page="commissioner"] #ledger { display:none !important; }
-html[data-page="bet"] main > :not(.hero-grid):not(#builder):not(#analyzer):not(#pageAccess) { display:none !important; }
-html[data-page="bet"] .bank-card { display:none !important; }
-html[data-page="bet"]:not([data-can-bet="true"]) :is(#builder,#analyzer,.hero-grid) { display:none !important; }
-html[data-page="bet"] .hero-grid, .ledger-layout { grid-template-columns: minmax(0,1fr); }
+html:is([data-page="bet"],[data-page="preview"]) main > :not(.hero-grid):not(#builder):not(#analyzer):not(#pageAccess) { display:none !important; }
+html:is([data-page="bet"],[data-page="preview"]) .bank-card { display:none !important; }
+html:is([data-page="bet"],[data-page="preview"]):not([data-can-bet="true"]) :is(#builder,#analyzer,.hero-grid) { display:none !important; }
+html:is([data-page="bet"],[data-page="preview"]) .hero-grid, .ledger-layout { grid-template-columns: minmax(0,1fr); }
 html[data-page="home"] .hero-grid { grid-template-columns: minmax(0,1fr); }
 .future-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)) !important; }
 .future-card { padding:18px !important; }
@@ -28,3 +28,5 @@ html[data-page="home"] .stats-grid { display:none; }
 /* Keep notification setup compact, including Safari's installed web app. */
 #commissionerPush:not([open]) > :not(summary) { display:none !important; }
 #commissionerPush > summary { cursor:pointer; font-size:1rem; font-weight:700; padding:6px 0; }
+
+html:not([data-page="preview"][data-can-bet="true"]) #previewInstructions { display:none; }
